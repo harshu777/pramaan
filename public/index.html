@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+            width: 100%;
+        }
+
+        .hero {
+            text-align: center;
+            color: white;
+            padding: 3rem 0;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+            opacity: 0.95;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card h3 {
+            color: #333;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+            display: inline-block;
+        }
+
+        .result {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 5px;
+            display: none;
+        }
+
+        .result.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            display: block;
+        }
+
+        .result.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            display: block;
+        }
+
+        .qr-container {
+            text-align: center;
+            margin-top: 1rem;
+        }
+
+        .qr-container img {
+            max-width: 200px;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .feature {
+            text-align: center;
+            padding: 1rem;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 5px;
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .feature-title {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            background: none;
+            border: none;
+            color: #666;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .tab.active {
+            color: #667eea;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .loader {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🔐 Blockchain Certificate Management System</h1>
+    </div>
+
+    <div class="container">
+        <div class="hero">
+            <h2>Secure, Verifiable, Immutable Certificates</h2>
+            <p>Issue and verify certificates using IPFS and blockchain technology</p>
+        </div>
+
+        <div class="cards">
+            <!-- Issue Certificate Card -->
+            <div class="card">
+                <h3>
+                    <span class="icon">📝</span>
+                    Issue Certificate
+                </h3>
+                <p>Create and issue blockchain-anchored certificates</p>
+
+                <form id="issueForm">
+                    <div class="form-group">
+                        <label>Issuer DID</label>
+                        <input type="text" name="issuerDid" placeholder="did:example:issuer123" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Issuer Name</label>
+                        <input type="text" name="issuerName" placeholder="University Name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject Name</label>
+                        <input type="text" name="subjectName" placeholder="John Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject Email</label>
+                        <input type="email" name="subjectEmail" placeholder="john@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>Certificate Type</label>
+                        <select name="certificateType" required>
+                            <option value="">Select Type</option>
+                            <option value="degree">Degree</option>
+                            <option value="diploma">Diploma</option>
+                            <option value="course">Course Completion</option>
+                            <option value="achievement">Achievement</option>
+                            <option value="professional">Professional Certification</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date (Optional)</label>
+                        <input type="date" name="expiryDate">
+                    </div>
+                    <button type="submit" class="btn">Issue Certificate</button>
+                </form>
+                <div id="issueResult" class="result"></div>
+            </div>
+
+            <!-- Verify Certificate Card -->
+            <div class="card">
+                <h3>
+                    <span class="icon">✅</span>
+                    Verify Certificate
+                </h3>
+                <p>Validate certificate authenticity using hash</p>
+
+                <form id="verifyForm">
+                    <div class="form-group">
+                        <label>Certificate Hash</label>
+                        <input type="text" name="certHash" placeholder="Enter certificate hash" required>
+                    </div>
+                    <button type="submit" class="btn">Verify Certificate</button>
+                </form>
+                <div id="verifyResult" class="result"></div>
+            </div>
+
+            <!-- Search Certificates Card -->
+            <div class="card">
+                <h3>
+                    <span class="icon">🔍</span>
+                    Search Certificates
+                </h3>
+                <p>Find certificates by name, email, or type</p>
+
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label>Search Query</label>
+                        <input type="text" name="query" placeholder="Enter search term" required>
+                    </div>
+                    <button type="submit" class="btn">Search</button>
+                </form>
+                <div id="searchResult" class="result"></div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 2rem;">
+            <h3>System Features</h3>
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🔗</div>
+                    <div class="feature-title">Blockchain Secured</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-title">IPFS Storage</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <div class="feature-title">QR Code Validation</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-title">Tamper-Proof</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🌐</div>
+                    <div class="feature-title">Decentralized</div>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">⚡</div>
+                    <div class="feature-title">Instant Verification</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+
+        // Issue Certificate
+        document.getElementById('issueForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+
+            if (data.expiryDate) {
+                data.expiryDate = new Date(data.expiryDate).toISOString();
+            }
+
+            const resultDiv = document.getElementById('issueResult');
+            resultDiv.innerHTML = '<div class="loader"></div>';
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'block';
+
+            try {
+                // Note: This requires authentication token in real implementation
+                const response = await fetch(`${API_BASE}/certificates/issue`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        // 'Authorization': 'Bearer YOUR_TOKEN'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    resultDiv.className = 'result success';
+                    resultDiv.innerHTML = `
+                        <strong>Certificate Issued Successfully!</strong><br>
+                        Hash: ${result.data.certHash}<br>
+                        IPFS CID: ${result.data.ipfsCid}<br>
+                        ${result.data.blockchainTxHash ? `Blockchain TX: ${result.data.blockchainTxHash}<br>` : ''}
+                        ${result.data.qrCode ? `<div class="qr-container"><img src="${result.data.qrCode}" alt="QR Code"></div>` : ''}
+                    `;
+                } else {
+                    throw new Error(result.message || 'Failed to issue certificate');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        });
+
+        // Verify Certificate
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const certHash = formData.get('certHash');
+
+            const resultDiv = document.getElementById('verifyResult');
+            resultDiv.innerHTML = '<div class="loader"></div>';
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/certificates/validate/${certHash}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const cert = result.certificate;
+                    resultDiv.className = result.isValid ? 'result success' : 'result error';
+                    resultDiv.innerHTML = `
+                        <strong>${result.isValid ? '✓ Valid Certificate' : '✗ Invalid Certificate'}</strong><br>
+                        Subject: ${cert.subjectName}<br>
+                        Issuer: ${cert.issuerName}<br>
+                        Type: ${cert.certificateType}<br>
+                        Issued: ${new Date(cert.issuedDate).toLocaleDateString()}<br>
+                        ${cert.expiryDate ? `Expires: ${new Date(cert.expiryDate).toLocaleDateString()}<br>` : ''}
+                        Status: ${cert.status}<br>
+                        ${cert.isExpired ? '<span style="color: orange;">⚠ Certificate has expired</span><br>' : ''}
+                        ${cert.isRevoked ? '<span style="color: red;">⚠ Certificate has been revoked</span><br>' : ''}
+                        Blockchain: ${cert.blockchainVerified ? '✓ Verified' : '✗ Not Verified'}<br>
+                        IPFS: ${cert.ipfsVerified ? '✓ Verified' : '✗ Not Verified'}
+                    `;
+                } else {
+                    throw new Error(result.message || 'Certificate not found');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        });
+
+        // Search Certificates
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const query = formData.get('query');
+
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.innerHTML = '<div class="loader"></div>';
+            resultDiv.className = 'result';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE}/certificates/search?q=${encodeURIComponent(query)}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    if (result.data.length === 0) {
+                        resultDiv.className = 'result';
+                        resultDiv.innerHTML = 'No certificates found matching your search.';
+                    } else {
+                        resultDiv.className = 'result success';
+                        let html = `<strong>Found ${result.count} certificate(s):</strong><br><br>`;
+                        result.data.forEach(cert => {
+                            html += `
+                                <div style="margin-bottom: 1rem; padding: 0.5rem; background: rgba(0,0,0,0.05); border-radius: 5px;">
+                                    <strong>${cert.subject_name}</strong><br>
+                                    Type: ${cert.certificate_type}<br>
+                                    Issuer: ${cert.issuer_name}<br>
+                                    Issued: ${new Date(cert.issued_date).toLocaleDateString()}<br>
+                                    Hash: ${cert.cert_hash}<br>
+                                    Status: ${cert.status}
+                                </div>
+                            `;
+                        });
+                        resultDiv.innerHTML = html;
+                    }
+                } else {
+                    throw new Error(result.message || 'Search failed');
+                }
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.innerHTML = `<strong>Error:</strong> ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

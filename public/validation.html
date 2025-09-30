@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Validation Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 1.8rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: #764ba2;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+        }
+
+        .search-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-bottom: 2rem;
+        }
+
+        .search-title {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .search-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab-btn {
+            padding: 0.75rem 2rem;
+            background: #f8f9fa;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+            color: #495057;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .search-form {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-btn {
+            padding: 1rem 2.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.3s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .search-hints {
+            color: #666;
+            font-size: 0.9rem;
+            margin-top: 0.5rem;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: none;
+        }
+
+        .results-section.show {
+            display: block;
+        }
+
+        .result-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s;
+        }
+
+        .result-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .result-title {
+            font-size: 1.2rem;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .status-badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-valid {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-expired {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-revoked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .result-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .detail-item {
+            padding: 0.5rem 0;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .detail-value {
+            color: #333;
+            margin-top: 0.25rem;
+        }
+
+        .result-actions {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .action-btn {
+            padding: 0.5rem 1.5rem;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            background: white;
+            color: #667eea;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .action-btn:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            display: none;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-msg {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 5px;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-section h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .info-section p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .qr-upload {
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .qr-upload:hover {
+            background: #eef1ff;
+        }
+
+        .qr-upload input[type="file"] {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            .search-form {
+                flex-direction: column;
+            }
+
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .result-details {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <h1>Certificate Validation Portal</h1>
+            <div class="nav-links">
+                <a href="/static/index.html">Home</a>
+                <a href="#" onclick="showTab('hash')">Validate</a>
+                <a href="#" onclick="showTab('search')">Search</a>
+                <a href="/static/login.html">Admin Login</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="search-section">
+            <h2 class="search-title">Verify Certificate Authenticity</h2>
+
+            <div class="search-tabs">
+                <button class="tab-btn active" onclick="showTab('hash')">By Certificate Hash</button>
+                <button class="tab-btn" onclick="showTab('search')">Search Certificates</button>
+                <button class="tab-btn" onclick="showTab('qr')">Scan QR Code</button>
+            </div>
+
+            <div id="hash-tab" class="tab-content active">
+                <div class="search-form">
+                    <input type="text" id="hashInput" class="search-input" placeholder="Enter certificate hash (e.g., abc123def456...)" maxlength="64">
+                    <button class="search-btn" onclick="validateByHash()">Validate</button>
+                </div>
+                <div class="search-hints">Enter the unique certificate hash to verify its authenticity and current status.</div>
+            </div>
+
+            <div id="search-tab" class="tab-content">
+                <div class="search-form">
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search by name, issuer, or certificate type">
+                    <button class="search-btn" onclick="searchCertificates()">Search</button>
+                </div>
+                <div class="search-hints">Find certificates by entering recipient name, issuer name, or certificate type.</div>
+            </div>
+
+            <div id="qr-tab" class="tab-content">
+                <div class="qr-upload" onclick="document.getElementById('qrInput').click()">
+                    <input type="file" id="qrInput" accept="image/*" onchange="handleQRUpload(event)">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="#667eea" style="margin-bottom: 1rem;">
+                        <path d="M9 3H5C3.9 3 3 3.9 3 5V9H5V5H9V3M15 3V5H19V9H21V5C21 3.9 20.1 3 19 3H15M5 15H3V19C3 20.1 3.9 21 5 21H9V19H5V15M19 19H15V21H19C20.1 21 21 20.1 21 19V15H19V19M12 8C10.3 8 9 9.3 9 11S10.3 14 12 14 15 12.7 15 11 13.7 8 12 8M12 16C9.2 16 7 13.8 7 11S9.2 6 12 6 17 8.2 17 11 14.8 16 12 16Z"/>
+                    </svg>
+                    <h3>Upload QR Code Image</h3>
+                    <p>Click to select or drag and drop a QR code image</p>
+                </div>
+                <div class="search-hints">Upload a certificate QR code image to quickly validate the certificate.</div>
+            </div>
+
+            <div class="error-msg" id="errorMsg"></div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Validating certificate...</p>
+        </div>
+
+        <div class="results-section" id="results"></div>
+
+        <div class="info-section">
+            <h2>About Certificate Validation</h2>
+            <p>Our certificate validation system uses blockchain technology and IPFS to ensure the authenticity and immutability of issued certificates. Each certificate is:</p>
+            <ul style="margin-left: 2rem; color: #666; line-height: 1.8;">
+                <li>Secured with a unique cryptographic hash</li>
+                <li>Stored permanently on IPFS (InterPlanetary File System)</li>
+                <li>Anchored on the blockchain for tamper-proof verification</li>
+                <li>Verifiable in real-time through multiple methods</li>
+            </ul>
+            <p style="margin-top: 1rem;">For support or questions, please contact the certificate issuing authority.</p>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin + '/api';
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+
+            // Clear previous results
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('errorMsg').classList.remove('show');
+        }
+
+        async function validateByHash() {
+            const hash = document.getElementById('hashInput').value.trim();
+
+            if (!hash) {
+                showError('Please enter a certificate hash');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/certificates/validate/${hash}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Validation failed');
+                }
+
+                if (data.success && data.certificate) {
+                    displayValidationResult(data);
+                } else {
+                    showError('Certificate not found or invalid');
+                }
+            } catch (error) {
+                showError(error.message || 'Failed to validate certificate');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function searchCertificates() {
+            const query = document.getElementById('searchInput').value.trim();
+
+            if (!query) {
+                showError('Please enter a search term');
+                return;
+            }
+
+            showLoading(true);
+            hideError();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/certificates/search?q=${encodeURIComponent(query)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Search failed');
+                }
+
+                if (data.success && data.data.length > 0) {
+                    displaySearchResults(data.data);
+                } else {
+                    showError('No certificates found matching your search');
+                }
+            } catch (error) {
+                showError(error.message || 'Failed to search certificates');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayValidationResult(data) {
+            const cert = data.certificate;
+            const resultsDiv = document.getElementById('results');
+
+            let statusClass = 'status-valid';
+            let statusText = 'Valid';
+
+            if (cert.isRevoked) {
+                statusClass = 'status-revoked';
+                statusText = 'Revoked';
+            } else if (cert.isExpired) {
+                statusClass = 'status-expired';
+                statusText = 'Expired';
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3 class="result-title">Certificate Validation Result</h3>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                    <div class="result-details">
+                        <div class="detail-item">
+                            <div class="detail-label">Certificate Hash</div>
+                            <div class="detail-value">${cert.certificateHash.substring(0, 20)}...</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Subject Name</div>
+                            <div class="detail-value">${cert.subjectName}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Issuer</div>
+                            <div class="detail-value">${cert.issuerName}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Certificate Type</div>
+                            <div class="detail-value">${cert.certificateType}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Issue Date</div>
+                            <div class="detail-value">${new Date(cert.issuedDate).toLocaleDateString()}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Expiry Date</div>
+                            <div class="detail-value">${cert.expiryDate ? new Date(cert.expiryDate).toLocaleDateString() : 'No Expiry'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">Blockchain Verified</div>
+                            <div class="detail-value">${cert.blockchainVerified ? '✓ Yes' : '✗ No'}</div>
+                        </div>
+                        <div class="detail-item">
+                            <div class="detail-label">IPFS Verified</div>
+                            <div class="detail-value">${cert.ipfsVerified ? '✓ Yes' : '✗ No'}</div>
+                        </div>
+                    </div>
+                    ${cert.metadata ? `
+                        <div class="result-details" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e0e0;">
+                            ${cert.metadata.gameName ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Game/Sport</div>
+                                    <div class="detail-value">${cert.metadata.gameName}</div>
+                                </div>
+                            ` : ''}
+                            ${cert.metadata.competitionName ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Competition</div>
+                                    <div class="detail-value">${cert.metadata.competitionName}</div>
+                                </div>
+                            ` : ''}
+                            ${cert.metadata.positionObtained ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">Position</div>
+                                    <div class="detail-value">${cert.metadata.positionObtained}</div>
+                                </div>
+                            ` : ''}
+                            ${cert.metadata.district ? `
+                                <div class="detail-item">
+                                    <div class="detail-label">District</div>
+                                    <div class="detail-value">${cert.metadata.district}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                    <div class="result-actions">
+                        <a href="${API_BASE_URL}/certificates/verify/${cert.certificateHash}" target="_blank" class="action-btn">View Full Details</a>
+                        <a href="${API_BASE_URL}/certificates/download/${cert.certificateHash}" class="action-btn">Download Certificate</a>
+                    </div>
+                </div>
+            `;
+
+            resultsDiv.classList.add('show');
+        }
+
+        function displaySearchResults(certificates) {
+            const resultsDiv = document.getElementById('results');
+
+            let html = '<h3 style="margin-bottom: 1.5rem;">Search Results (' + certificates.length + ' found)</h3>';
+
+            certificates.forEach(cert => {
+                let statusClass = 'status-valid';
+                let statusText = 'Valid';
+
+                if (cert.status === 'revoked') {
+                    statusClass = 'status-revoked';
+                    statusText = 'Revoked';
+                } else if (cert.expiry_date && new Date(cert.expiry_date) < new Date()) {
+                    statusClass = 'status-expired';
+                    statusText = 'Expired';
+                }
+
+                html += `
+                    <div class="result-card">
+                        <div class="result-header">
+                            <h4 class="result-title">${cert.subject_name}</h4>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="result-details">
+                            <div class="detail-item">
+                                <div class="detail-label">Certificate Type</div>
+                                <div class="detail-value">${cert.certificate_type}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Issuer</div>
+                                <div class="detail-value">${cert.issuer_name}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Issue Date</div>
+                                <div class="detail-value">${new Date(cert.issued_date).toLocaleDateString()}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="detail-label">Certificate Hash</div>
+                                <div class="detail-value">${cert.cert_hash.substring(0, 20)}...</div>
+                            </div>
+                        </div>
+                        <div class="result-actions">
+                            <button class="action-btn" onclick="document.getElementById('hashInput').value='${cert.cert_hash}'; showTab('hash'); validateByHash();">Validate</button>
+                            <a href="${API_BASE_URL}/certificates/verify/${cert.cert_hash}" target="_blank" class="action-btn">View Details</a>
+                        </div>
+                    </div>
+                `;
+            });
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.classList.add('show');
+        }
+
+        function handleQRUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                showError('QR code scanning feature coming soon. Please use the certificate hash instead.');
+                // In a production environment, you would use a QR code reader library
+                // to extract the certificate hash from the image and validate it
+            }
+        }
+
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            if (show) {
+                loadingDiv.classList.add('show');
+            } else {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+        }
+
+        function hideError() {
+            const errorDiv = document.getElementById('errorMsg');
+            errorDiv.classList.remove('show');
+        }
+
+        // Check if there's a certificate hash in the URL
+        window.addEventListener('load', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const hash = urlParams.get('hash');
+            if (hash) {
+                document.getElementById('hashInput').value = hash;
+                validateByHash();
+            }
+        });
+    </script>
+</body>
+</html>

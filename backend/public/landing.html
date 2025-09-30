@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Management System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .container {
+            flex: 1;
+            max-width: 1200px;
+            margin: 3rem auto;
+            padding: 0 2rem;
+            width: 100%;
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-top: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .card h3 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .card-link {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: transform 0.3s;
+        }
+
+        .card-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .admin-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .admin-card h3, .admin-card p {
+            color: white;
+        }
+
+        .admin-card .card-link {
+            background: white;
+            color: #667eea;
+        }
+
+        .validation-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+        }
+
+        .validation-card h3, .validation-card p {
+            color: white;
+        }
+
+        .validation-card .card-link {
+            background: white;
+            color: #28a745;
+        }
+
+        .info-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-top: 3rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-section h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+
+        .info-section ul {
+            margin-left: 2rem;
+            color: #666;
+            line-height: 2;
+        }
+
+        .footer {
+            background: rgba(0, 0, 0, 0.1);
+            color: white;
+            text-align: center;
+            padding: 2rem;
+            margin-top: 3rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🏆 Certificate Management System</h1>
+        <p>Blockchain-Secured Digital Certificates with IPFS Storage</p>
+    </div>
+
+    <div class="container">
+        <div class="cards-grid">
+            <!-- Public Validation Card -->
+            <div class="card validation-card">
+                <div class="card-icon">✓</div>
+                <h3>Validate Certificate</h3>
+                <p>Verify the authenticity of any certificate using its hash, search by name, or scan QR code.</p>
+                <a href="/static/validation.html" class="card-link">Open Validation Portal</a>
+            </div>
+
+            <!-- Admin Bulk Upload Card -->
+            <div class="card admin-card">
+                <div class="card-icon">📁</div>
+                <h3>Bulk Upload</h3>
+                <p>Upload Excel files to issue multiple certificates at once with automatic email delivery.</p>
+                <a href="/static/bulk-upload.html" class="card-link">Access Bulk Upload</a>
+            </div>
+
+            <!-- Dashboard Card -->
+            <div class="card">
+                <div class="card-icon">📊</div>
+                <h3>Dashboard</h3>
+                <p>View comprehensive analytics, manage certificates, and monitor system performance.</p>
+                <a href="/static/dashboard-professional.html" class="card-link">View Dashboard</a>
+            </div>
+
+            <!-- Admin Login Card -->
+            <div class="card">
+                <div class="card-icon">🔐</div>
+                <h3>Admin Login</h3>
+                <p>Access administrative features for certificate management and system configuration.</p>
+                <a href="/static/login.html" class="card-link">Login</a>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <h2>System Features</h2>
+            <ul>
+                <li>✅ Blockchain-anchored certificates for immutable verification</li>
+                <li>✅ IPFS distributed storage for permanent availability</li>
+                <li>✅ Bulk certificate issuance via Excel upload</li>
+                <li>✅ Automatic PDF generation with QR codes</li>
+                <li>✅ Email delivery with validation links</li>
+                <li>✅ Public verification portal with search</li>
+                <li>✅ Real-time certificate validation</li>
+                <li>✅ Tamper-proof cryptographic hashing</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2024 Certificate Management System | Powered by Blockchain & IPFS</p>
+    </div>
+</body>
+</html>
