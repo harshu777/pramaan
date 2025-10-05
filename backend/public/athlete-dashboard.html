@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Athlete Dashboard - Pramaan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .header-info h1 {
+            color: #333;
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header-info p {
+            color: #666;
+            font-size: 0.95rem;
+        }
+
+        .btn-logout {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .search-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.85rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .certificates-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 2rem;
+        }
+
+        .certificates-header {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .certificates-header h2 {
+            color: #333;
+            font-size: 1.5rem;
+        }
+
+        .certificate-grid {
+            display: grid;
+            gap: 1.5rem;
+        }
+
+        .certificate-card {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.3s;
+            background: #fafafa;
+        }
+
+        .certificate-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .certificate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .certificate-type {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-revoked {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-expired {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .certificate-info {
+            margin-bottom: 1rem;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 0.5rem;
+            font-size: 0.95rem;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #555;
+            min-width: 120px;
+        }
+
+        .info-value {
+            color: #666;
+        }
+
+        .certificate-actions {
+            display: flex;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 0.6rem 1.2rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-view {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #5568d3;
+            transform: translateY(-1px);
+        }
+
+        .btn-download {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-download:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .btn-validate {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .btn-validate:hover {
+            background: #138496;
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #666;
+        }
+
+        .empty-state-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: #666;
+        }
+
+        .loader {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f3f3;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 2rem;
+            border-radius: 20px 20px 0 0;
+            color: white;
+        }
+
+        .modal-header h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .modal-body {
+            padding: 2rem;
+        }
+
+        .modal-close {
+            color: white;
+            float: right;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            line-height: 1;
+            transition: opacity 0.2s;
+        }
+
+        .modal-close:hover {
+            opacity: 0.8;
+        }
+
+        .detail-row {
+            margin-bottom: 1.2rem;
+            padding-bottom: 1.2rem;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .detail-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            color: #555;
+            font-size: 0.9rem;
+            margin-bottom: 0.3rem;
+        }
+
+        .detail-value {
+            color: #333;
+            font-size: 1rem;
+            word-wrap: break-word;
+        }
+
+        .message {
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .message-error {
+            background: #fee;
+            color: #c33;
+            border-left: 4px solid #c33;
+        }
+
+        .message-success {
+            background: #efe;
+            color: #3c3;
+            border-left: 4px solid #3c3;
+        }
+
+        .message-info {
+            background: #e7f3ff;
+            color: #004085;
+            border-left: 4px solid #004085;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                text-align: center;
+            }
+
+            .header-info h1 {
+                font-size: 1.5rem;
+            }
+
+            .certificate-actions {
+                width: 100%;
+            }
+
+            .btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-info">
+                <h1>Welcome, <span id="athleteName">Athlete</span></h1>
+                <p>Manage and verify your certificates</p>
+            </div>
+            <button class="btn-logout" onclick="handleLogout()">Logout</button>
+        </div>
+
+        <!-- Search -->
+        <div class="search-container">
+            <input
+                type="text"
+                id="searchInput"
+                class="search-input"
+                placeholder="Search certificates by type, issuer, or status..."
+                oninput="filterCertificates()"
+            >
+        </div>
+
+        <!-- Messages -->
+        <div id="messageContainer"></div>
+
+        <!-- Certificates -->
+        <div class="certificates-container">
+            <div class="certificates-header">
+                <h2>My Certificates (<span id="certificateCount">0</span>)</h2>
+            </div>
+
+            <div id="loadingState" class="loading">
+                <div class="loader"></div>
+                <p>Loading your certificates...</p>
+            </div>
+
+            <div id="emptyState" class="empty-state" style="display: none;">
+                <div class="empty-state-icon">📜</div>
+                <h3>No Certificates Found</h3>
+                <p>You don't have any certificates yet.</p>
+            </div>
+
+            <div id="certificateGrid" class="certificate-grid" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Certificate Details Modal -->
+    <div id="certificateModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-close" onclick="closeModal()">&times;</span>
+                <h2>Certificate Details</h2>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Certificate details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let allCertificates = [];
+        let filteredCertificates = [];
+
+        // Check authentication on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('athleteToken');
+            const athlete = JSON.parse(localStorage.getItem('athlete') || '{}');
+
+            if (!token) {
+                window.location.href = '/static/athlete-login.html';
+                return;
+            }
+
+            // Set athlete name
+            document.getElementById('athleteName').textContent = athlete.name || 'Athlete';
+
+            // Load certificates
+            loadCertificates();
+        });
+
+        // Logout handler
+        function handleLogout() {
+            localStorage.removeItem('athleteToken');
+            localStorage.removeItem('athlete');
+            window.location.href = '/static/athlete-login.html';
+        }
+
+        // Load certificates from API
+        async function loadCertificates() {
+            const token = localStorage.getItem('athleteToken');
+            const loadingState = document.getElementById('loadingState');
+            const emptyState = document.getElementById('emptyState');
+            const certificateGrid = document.getElementById('certificateGrid');
+
+            loadingState.style.display = 'block';
+            emptyState.style.display = 'none';
+            certificateGrid.style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/athletes/certificates`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        showMessage('Session expired. Please login again.', 'error');
+                        setTimeout(() => handleLogout(), 2000);
+                        return;
+                    }
+                    throw new Error(result.message || 'Failed to load certificates');
+                }
+
+                allCertificates = result.certificates || [];
+                filteredCertificates = [...allCertificates];
+
+                loadingState.style.display = 'none';
+
+                if (allCertificates.length === 0) {
+                    emptyState.style.display = 'block';
+                } else {
+                    certificateGrid.style.display = 'grid';
+                    renderCertificates();
+                }
+
+                updateCertificateCount();
+
+            } catch (error) {
+                console.error('Error loading certificates:', error);
+                loadingState.style.display = 'none';
+                showMessage(error.message || 'Failed to load certificates', 'error');
+            }
+        }
+
+        // Render certificates to grid
+        function renderCertificates() {
+            const certificateGrid = document.getElementById('certificateGrid');
+            certificateGrid.innerHTML = '';
+
+            filteredCertificates.forEach(cert => {
+                const card = createCertificateCard(cert);
+                certificateGrid.appendChild(card);
+            });
+
+            updateCertificateCount();
+        }
+
+        // Create certificate card element
+        function createCertificateCard(cert) {
+            const card = document.createElement('div');
+            card.className = 'certificate-card';
+
+            const status = determineStatus(cert);
+            const statusClass = `status-${status.toLowerCase()}`;
+
+            card.innerHTML = `
+                <div class="certificate-header">
+                    <div class="certificate-type">${escapeHtml(cert.certificateType || 'Certificate')}</div>
+                    <span class="status-badge ${statusClass}">${status}</span>
+                </div>
+                <div class="certificate-info">
+                    <div class="info-row">
+                        <span class="info-label">Issuer:</span>
+                        <span class="info-value">${escapeHtml(cert.issuer || 'N/A')}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Issue Date:</span>
+                        <span class="info-value">${formatDate(cert.issueDate || cert.uploadedAt)}</span>
+                    </div>
+                    ${cert.validUntil ? `
+                    <div class="info-row">
+                        <span class="info-label">Valid Until:</span>
+                        <span class="info-value">${formatDate(cert.validUntil)}</span>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="certificate-actions">
+                    <button class="btn btn-view" onclick="viewCertificate('${cert.certHash}')">
+                        View Details
+                    </button>
+                    <button class="btn btn-download" onclick="downloadCertificate('${cert.certHash}')">
+                        Download
+                    </button>
+                    <button class="btn btn-validate" onclick="validateCertificate('${cert.certHash}')">
+                        Validate
+                    </button>
+                </div>
+            `;
+
+            return card;
+        }
+
+        // Determine certificate status
+        function determineStatus(cert) {
+            if (cert.revoked || cert.isRevoked) {
+                return 'Revoked';
+            }
+
+            if (cert.validUntil) {
+                const validUntilDate = new Date(cert.validUntil);
+                if (validUntilDate < new Date()) {
+                    return 'Expired';
+                }
+            }
+
+            return 'Active';
+        }
+
+        // Filter certificates based on search input
+        function filterCertificates() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const emptyState = document.getElementById('emptyState');
+            const certificateGrid = document.getElementById('certificateGrid');
+
+            if (!searchTerm) {
+                filteredCertificates = [...allCertificates];
+            } else {
+                filteredCertificates = allCertificates.filter(cert => {
+                    const type = (cert.certificateType || '').toLowerCase();
+                    const issuer = (cert.issuer || '').toLowerCase();
+                    const status = determineStatus(cert).toLowerCase();
+
+                    return type.includes(searchTerm) ||
+                           issuer.includes(searchTerm) ||
+                           status.includes(searchTerm);
+                });
+            }
+
+            if (filteredCertificates.length === 0) {
+                certificateGrid.style.display = 'none';
+                emptyState.style.display = 'block';
+                emptyState.innerHTML = `
+                    <div class="empty-state-icon">🔍</div>
+                    <h3>No Certificates Found</h3>
+                    <p>No certificates match your search criteria.</p>
+                `;
+            } else {
+                emptyState.style.display = 'none';
+                certificateGrid.style.display = 'grid';
+                renderCertificates();
+            }
+        }
+
+        // View certificate details
+        function viewCertificate(certHash) {
+            const cert = allCertificates.find(c => c.certHash === certHash);
+            if (!cert) return;
+
+            const status = determineStatus(cert);
+            const statusClass = `status-${status.toLowerCase()}`;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="detail-row">
+                    <div class="detail-label">Certificate Type</div>
+                    <div class="detail-value">${escapeHtml(cert.certificateType || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">
+                        <span class="status-badge ${statusClass}">${status}</span>
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Certificate Hash</div>
+                    <div class="detail-value" style="font-family: monospace; font-size: 0.9rem;">${escapeHtml(cert.certHash)}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Issuer</div>
+                    <div class="detail-value">${escapeHtml(cert.issuer || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Subject</div>
+                    <div class="detail-value">${escapeHtml(cert.subject || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Issue Date</div>
+                    <div class="detail-value">${formatDate(cert.issueDate || cert.uploadedAt)}</div>
+                </div>
+                ${cert.validUntil ? `
+                <div class="detail-row">
+                    <div class="detail-label">Valid Until</div>
+                    <div class="detail-value">${formatDate(cert.validUntil)}</div>
+                </div>
+                ` : ''}
+                ${cert.ipfsCid ? `
+                <div class="detail-row">
+                    <div class="detail-label">IPFS CID</div>
+                    <div class="detail-value" style="font-family: monospace; font-size: 0.9rem;">${escapeHtml(cert.ipfsCid)}</div>
+                </div>
+                ` : ''}
+                <div class="detail-row">
+                    <div class="detail-label">Uploaded</div>
+                    <div class="detail-value">${formatDate(cert.uploadedAt)}</div>
+                </div>
+            `;
+
+            document.getElementById('certificateModal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('certificateModal').style.display = 'none';
+        }
+
+        // Close modal when clicking outside
+        window.onclick = function(event) {
+            const modal = document.getElementById('certificateModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+
+        // Download certificate
+        async function downloadCertificate(certHash) {
+            try {
+                const response = await fetch(`${API_BASE}/certificates/download/${certHash}`);
+
+                if (!response.ok) {
+                    throw new Error('Failed to download certificate');
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `certificate-${certHash}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showMessage('Certificate downloaded successfully', 'success');
+            } catch (error) {
+                console.error('Error downloading certificate:', error);
+                showMessage(error.message || 'Failed to download certificate', 'error');
+            }
+        }
+
+        // Validate certificate on blockchain
+        async function validateCertificate(certHash) {
+            try {
+                showMessage('Validating certificate on blockchain...', 'info');
+
+                const response = await fetch(`${API_BASE}/certificates/validate/${certHash}`);
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Validation failed');
+                }
+
+                if (result.valid) {
+                    showMessage(`Certificate is valid! ${result.onChain ? 'Verified on blockchain.' : 'Verified in database.'}`, 'success');
+                } else {
+                    showMessage(`Certificate validation failed: ${result.message || 'Invalid certificate'}`, 'error');
+                }
+            } catch (error) {
+                console.error('Error validating certificate:', error);
+                showMessage(error.message || 'Failed to validate certificate', 'error');
+            }
+        }
+
+        // Update certificate count
+        function updateCertificateCount() {
+            document.getElementById('certificateCount').textContent = filteredCertificates.length;
+        }
+
+        // Show message
+        function showMessage(message, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message message-${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.display = 'block';
+
+            container.innerHTML = '';
+            container.appendChild(messageDiv);
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        // Format date
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+
+        // Escape HTML to prevent XSS
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

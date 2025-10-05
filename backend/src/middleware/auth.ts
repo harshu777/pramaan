@@ -26,18 +26,35 @@ export async function authenticate(
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret') as any;
 
-    const result = await query('SELECT * FROM issuers WHERE did = ? AND is_active = 1', [decoded.did]);
+    // Check if it's an athlete or issuer
+    if (decoded.type === 'athlete') {
+      const result = await query('SELECT * FROM athletes WHERE id = ? AND is_active = 1', [decoded.id]);
 
-    if (result.rows.length === 0) {
-      res.status(401).json({
-        success: false,
-        message: 'Invalid or inactive issuer',
-      });
-      return;
+      if (result.rows.length === 0) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid or inactive athlete',
+        });
+        return;
+      }
+
+      req.user = { ...result.rows[0], type: 'athlete' };
+      next();
+    } else {
+      // Default to issuer authentication
+      const result = await query('SELECT * FROM issuers WHERE did = ? AND is_active = 1', [decoded.did]);
+
+      if (result.rows.length === 0) {
+        res.status(401).json({
+          success: false,
+          message: 'Invalid or inactive issuer',
+        });
+        return;
+      }
+
+      req.user = { ...result.rows[0], type: 'issuer' };
+      next();
     }
-
-    req.user = result.rows[0];
-    next();
   } catch (error) {
     logger.error('Authentication error:', error);
     res.status(401).json({

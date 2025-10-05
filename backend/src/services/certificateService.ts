@@ -64,6 +64,10 @@ class CertificateService {
         ? { ...data.metadata, uploadedFilePath: data.uploadedFilePath }
         : data.metadata;
 
+      if (data.uploadedFilePath) {
+        logger.info(`Certificate will include uploaded file: ${data.uploadedFilePath}`);
+      }
+
       const certificateContent = {
         id: certificateId,
         issuerDid: data.issuerDid,
@@ -145,7 +149,7 @@ class CertificateService {
         data.expiryDate?.toISOString(),
         blockchainTxHash,
         blockNumber,
-        JSON.stringify(data.metadata),
+        JSON.stringify(metadataWithFile), // Use metadataWithFile instead of data.metadata
         'active',
         digitalSignature ? JSON.stringify(digitalSignature) : null
       ];

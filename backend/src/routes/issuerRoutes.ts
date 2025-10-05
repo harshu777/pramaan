@@ -22,7 +22,7 @@ router.post('/register',
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const insertQuery = `
-      INSERT INTO issuers (id, did, name, organization, email, wallet_address, public_key)
+      INSERT INTO issuers (id, did, name, organization, email, wallet_address, password_hash)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -81,7 +81,17 @@ router.post('/login',
     }
 
     const issuer = result.rows[0];
-    const isValid = await bcrypt.compare(password, issuer.public_key);
+
+    // Check if password_hash exists, fallback to public_key for backward compatibility
+    const passwordHash = issuer.password_hash || issuer.public_key;
+    if (!passwordHash) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials',
+      });
+    }
+
+    const isValid = await bcrypt.compare(password, passwordHash);
 
     if (!isValid) {
       return res.status(401).json({
@@ -95,6 +105,7 @@ router.post('/login',
         id: issuer.id,
         did: issuer.did,
         name: issuer.name,
+        type: 'issuer'
       },
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }

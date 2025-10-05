@@ -55,6 +55,19 @@ router.post('/issue',
     // If a file was uploaded, use its path
     if (req.file) {
       certificateFilePath = req.file.path;
+      logger.info(`File uploaded: ${certificateFilePath}`);
+    }
+
+    // Parse metadata if it's a JSON string
+    let metadata = {};
+    if (req.body.metadata) {
+      try {
+        metadata = typeof req.body.metadata === 'string'
+          ? JSON.parse(req.body.metadata)
+          : req.body.metadata;
+      } catch (e) {
+        metadata = {};
+      }
     }
 
     const certificateData = {
@@ -65,7 +78,7 @@ router.post('/issue',
       subjectEmail: req.body.subjectEmail,
       certificateType: req.body.certificateType,
       expiryDate: req.body.expiryDate ? new Date(req.body.expiryDate) : undefined,
-      metadata: req.body.metadata,
+      metadata: metadata,
       uploadedFilePath: certificateFilePath, // Store the uploaded file path
     };
 
@@ -279,6 +292,160 @@ router.get('/download/:certHash',
     }
   })
 );
+
+// Assign certificate to athlete
+router.post('/assign/:certHash', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const { certHash } = req.params;
+  const { athleteId } = req.body;
+  const assignedBy = (req as any).user?.did || (req as any).user?.email || 'system';
+
+  if (!athleteId) {
+    return res.status(400).json({
+      success: false,
+      message: 'Athlete ID is required'
+    });
+  }
+
+  // Check if certificate exists
+  const certResult = await query('SELECT * FROM certificates WHERE cert_hash = ?', [certHash]);
+
+  if (certResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Certificate not found'
+    });
+  }
+
+  const certificate = certResult.rows[0];
+
+  // Check if athlete exists
+  const athleteResult = await query('SELECT * FROM athletes WHERE id = ?', [athleteId]);
+
+  if (athleteResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Athlete not found'
+    });
+  }
+
+  // Check if already assigned
+  const existingAssignment = await query(
+    'SELECT * FROM certificate_assignments WHERE certificate_id = ? AND athlete_id = ?',
+    [certificate.id, athleteId]
+  );
+
+  if (existingAssignment.rows.length > 0) {
+    return res.status(409).json({
+      success: false,
+      message: 'Certificate already assigned to this athlete'
+    });
+  }
+
+  // Create assignment
+  const assignmentId = require('uuid').v4();
+  await query(
+    `INSERT INTO certificate_assignments (id, certificate_id, athlete_id, assigned_by)
+     VALUES (?, ?, ?, ?)`,
+    [assignmentId, certificate.id, athleteId, assignedBy]
+  );
+
+  res.json({
+    success: true,
+    message: 'Certificate assigned successfully',
+    assignment: {
+      id: assignmentId,
+      certificateId: certificate.id,
+      certHash: certificate.cert_hash,
+      athleteId
+    }
+  });
+}));
+
+// Auto-assign bulk certificates based on matching criteria
+router.post('/auto-assign', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const assignedBy = (req as any).user?.did || (req as any).user?.email || 'system';
+
+  // Get all unassigned certificates with metadata
+  const certResult = await query(`
+    SELECT c.* FROM certificates c
+    LEFT JOIN certificate_assignments ca ON c.id = ca.certificate_id
+    WHERE ca.id IS NULL AND c.metadata IS NOT NULL AND c.metadata != '{}'
+  `);
+
+  const certificates = certResult.rows;
+  const assignments = [];
+  const failures = [];
+
+  for (const cert of certificates) {
+    let metadata;
+    try {
+      metadata = typeof cert.metadata === 'string' ? JSON.parse(cert.metadata) : cert.metadata;
+    } catch (e) {
+      continue;
+    }
+
+    // Try to find matching athlete based on full name, DOB, email, or phone
+    const matchCriteria = [];
+    const matchParams = [];
+
+    if (cert.subject_email) {
+      matchCriteria.push('email = ?');
+      matchParams.push(cert.subject_email);
+    } else if (cert.subject_name && metadata.dob) {
+      matchCriteria.push('(full_name = ? AND dob = ?)');
+      matchParams.push(cert.subject_name, metadata.dob);
+    } else if (cert.subject_name) {
+      matchCriteria.push('full_name = ?');
+      matchParams.push(cert.subject_name);
+    }
+
+    if (matchCriteria.length === 0) {
+      failures.push({ certHash: cert.cert_hash, reason: 'Insufficient matching criteria' });
+      continue;
+    }
+
+    const athleteResult = await query(
+      `SELECT * FROM athletes WHERE ${matchCriteria.join(' OR ')} LIMIT 1`,
+      matchParams
+    );
+
+    if (athleteResult.rows.length > 0) {
+      const athlete = athleteResult.rows[0];
+
+      // Check if already assigned
+      const existingAssignment = await query(
+        'SELECT * FROM certificate_assignments WHERE certificate_id = ? AND athlete_id = ?',
+        [cert.id, athlete.id]
+      );
+
+      if (existingAssignment.rows.length === 0) {
+        const assignmentId = require('uuid').v4();
+        await query(
+          `INSERT INTO certificate_assignments (id, certificate_id, athlete_id, assigned_by)
+           VALUES (?, ?, ?, ?)`,
+          [assignmentId, cert.id, athlete.id, assignedBy]
+        );
+
+        assignments.push({
+          certHash: cert.cert_hash,
+          athleteId: athlete.id,
+          athleteName: athlete.full_name
+        });
+      }
+    } else {
+      failures.push({ certHash: cert.cert_hash, reason: 'No matching athlete found' });
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Auto-assignment completed`,
+    assigned: assignments.length,
+    failed: failures.length,
+    assignments,
+    failures
+  });
+}));
 
 router.get('/verify/:certHash',
   asyncHandler(async (req: Request, res: Response) => {

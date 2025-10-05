@@ -528,6 +528,12 @@
                     <li onclick="window.open('/static/validation.html', '_blank')">
                         🔍 Public Validation
                     </li>
+                    <li onclick="showAthletesModal()">
+                        👤 Manage Athletes
+                    </li>
+                    <li onclick="autoAssignCertificates()">
+                        🤖 Auto-Assign Certificates
+                    </li>
                     <li onclick="showCreateFolderModal()">
                         ➕ Create Folder
                     </li>
@@ -688,6 +694,8 @@
     <div class="toast" id="toast"></div>
 
     <script>
+        const API_BASE = 'http://localhost:3000/api';
+
         let certificates = [];
         let selectedCertificates = new Set();
         let currentFolder = 'all';
@@ -1027,6 +1035,8 @@
         // Logout
         function logout() {
             // Clear auth data
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
             localStorage.removeItem('authToken');
             localStorage.removeItem('userEmail');
             window.location.href = '/static/login.html';
@@ -1041,6 +1051,201 @@
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
+        }
+
+        // Show Athletes Modal
+        async function showAthletesModal() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/athletes`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) throw new Error('Failed to fetch athletes');
+
+                const result = await response.json();
+                const athletes = result.athletes || [];
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;" id="athletesModalOverlay" onclick="this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:800px;width:90%;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                            <h2 style="margin-bottom:20px;">Athletes Management</h2>
+                            <div style="margin-bottom:20px;">
+                                <input type="text" id="athleteSearch" placeholder="Search athletes..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;" onkeyup="filterAthletes()">
+                            </div>
+                            <table style="width:100%;border-collapse:collapse;">
+                                <thead>
+                                    <tr style="background:#f5f5f5;text-align:left;">
+                                        <th style="padding:10px;border-bottom:2px solid #ddd;">Name</th>
+                                        <th style="padding:10px;border-bottom:2px solid #ddd;">Email</th>
+                                        <th style="padding:10px;border-bottom:2px solid #ddd;">Phone</th>
+                                        <th style="padding:10px;border-bottom:2px solid #ddd;">DOB</th>
+                                        <th style="padding:10px;border-bottom:2px solid #ddd;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="athletesList">
+                `;
+
+                if (athletes.length === 0) {
+                    modalHTML += '<tr><td colspan="5" style="padding:20px;text-align:center;color:#999;">No athletes found</td></tr>';
+                } else {
+                    athletes.forEach(athlete => {
+                        modalHTML += `
+                            <tr class="athlete-row" data-name="${athlete.fullName.toLowerCase()}" data-email="${athlete.email.toLowerCase()}">
+                                <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.fullName}</td>
+                                <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.email}</td>
+                                <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.phoneNumber || '-'}</td>
+                                <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.dob || '-'}</td>
+                                <td style="padding:10px;border-bottom:1px solid #eee;">
+                                    <button onclick="showAssignCertificateModal('${athlete.id}', '${athlete.fullName}')" style="padding:5px 10px;background:#4CAF50;color:white;border:none;border-radius:3px;cursor:pointer;">Assign Certificate</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                modalHTML += `
+                                </tbody>
+                            </table>
+                            <div style="margin-top:20px;text-align:right;">
+                                <button onclick="document.getElementById('athletesModalOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            } catch (error) {
+                alert('Error loading athletes: ' + error.message);
+            }
+        }
+
+        function filterAthletes() {
+            const searchTerm = document.getElementById('athleteSearch').value.toLowerCase();
+            const rows = document.querySelectorAll('.athlete-row');
+
+            rows.forEach(row => {
+                const name = row.dataset.name;
+                const email = row.dataset.email;
+
+                if (name.includes(searchTerm) || email.includes(searchTerm)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // Show Assign Certificate Modal for a specific athlete
+        async function showAssignCertificateModal(athleteId, athleteName) {
+            const token = localStorage.getItem('token');
+
+            // Fetch all certificates
+            const response = await fetch(`${API_BASE}/certificates/search?q=`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const result = await response.json();
+            const certificates = result.data || [];
+
+            let modalHTML = `
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;" id="assignCertModalOverlay" onclick="this.remove()">
+                    <div style="background:white;border-radius:10px;padding:30px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <h2 style="margin-bottom:20px;">Assign Certificate to ${athleteName}</h2>
+                        <div style="margin-bottom:20px;">
+                            <select id="certSelect" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:5px;">
+                                <option value="">Select a certificate...</option>
+            `;
+
+            certificates.forEach(cert => {
+                modalHTML += `<option value="${cert.cert_hash}">${cert.subject_name} - ${cert.certificate_type} (${new Date(cert.issued_date).toLocaleDateString()})</option>`;
+            });
+
+            modalHTML += `
+                            </select>
+                        </div>
+                        <div style="margin-top:20px;text-align:right;">
+                            <button onclick="document.getElementById('assignCertModalOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;margin-right:10px;">Cancel</button>
+                            <button onclick="assignCertificateToAthlete('${athleteId}', '${athleteName}')" style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;">Assign</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Assign certificate to athlete
+        async function assignCertificateToAthlete(athleteId, athleteName) {
+            const token = localStorage.getItem('token');
+            const certHash = document.getElementById('certSelect').value;
+
+            if (!certHash) {
+                alert('Please select a certificate');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/certificates/assign/${certHash}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ athleteId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Certificate successfully assigned to ${athleteName}`);
+                    document.getElementById('assignCertModalOverlay').remove();
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error assigning certificate: ' + error.message);
+            }
+        }
+
+        // Auto-assign certificates
+        async function autoAssignCertificates() {
+            if (!confirm('This will automatically assign unassigned certificates to athletes based on their name, email, DOB, and phone number. Continue?')) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${API_BASE}/certificates/auto-assign`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(`Auto-assignment completed!\n\nAssigned: ${result.assigned}\nFailed: ${result.failed}\n\nCheck console for details.`);
+                    console.log('Assignment details:', result);
+                    showToast(`Auto-assigned ${result.assigned} certificates`);
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error during auto-assignment: ' + error.message);
+            }
         }
     </script>
 </body>

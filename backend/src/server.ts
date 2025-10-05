@@ -8,6 +8,7 @@ import { logger } from './utils/logger';
 import { errorHandler } from './middleware/errorHandler';
 import certificateRoutes from './routes/certificateRoutes';
 import issuerRoutes from './routes/issuerRoutes';
+import athleteRoutes from './routes/athleteRoutes';
 import bulkUploadRoutes from './routes/bulkUploadRoutes';
 import testEmailRoute from './routes/testEmailRoute';
 import { initializeDatabase } from './config/database-sqlite';
@@ -43,6 +44,7 @@ app.get('/', (req, res) => {
 
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/issuers', issuerRoutes);
+app.use('/api/athletes', athleteRoutes);
 app.use('/api/bulk-upload', bulkUploadRoutes);
 app.use('/api/test', testEmailRoute);
 
