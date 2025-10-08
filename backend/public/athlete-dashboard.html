@@ -458,6 +458,40 @@
         </div>
     </div>
 
+    <!-- Complaint Modal -->
+    <div id="complaintModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-close" onclick="closeComplaintModal()">&times;</span>
+                <h2>Raise Complaint</h2>
+            </div>
+            <div class="modal-body">
+                <form id="complaintForm" onsubmit="submitComplaint(event)">
+                    <input type="hidden" id="complaintCertHash">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Complaint Type *</label>
+                        <select id="complaintType" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                            <option value="">Select Type</option>
+                            <option value="incorrect_info">Incorrect Information</option>
+                            <option value="fraudulent">Fraudulent Certificate</option>
+                            <option value="unauthorized">Unauthorized Use</option>
+                            <option value="technical">Technical Issue</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Description *</label>
+                        <textarea id="complaintDescription" required rows="5" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical;" placeholder="Please describe your complaint in detail..."></textarea>
+                    </div>
+                    <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                        <button type="button" onclick="closeComplaintModal()" class="btn" style="background: #6c757d; color: white;">Cancel</button>
+                        <button type="submit" class="btn" style="background: #ff6b6b; color: white;">Submit Complaint</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API_BASE = window.location.origin + '/api';
         let allCertificates = [];
@@ -590,6 +624,9 @@
                     </button>
                     <button class="btn btn-validate" onclick="validateCertificate('${cert.certHash}')">
                         Validate
+                    </button>
+                    <button class="btn" style="background: #ff6b6b; color: white;" onclick="raiseComplaint('${cert.certHash}')">
+                        Raise Complaint
                     </button>
                 </div>
             `;
@@ -807,6 +844,63 @@
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // Raise Complaint Functions
+        function raiseComplaint(certHash) {
+            document.getElementById('complaintCertHash').value = certHash;
+            document.getElementById('complaintModal').style.display = 'block';
+        }
+
+        function closeComplaintModal() {
+            document.getElementById('complaintModal').style.display = 'none';
+            document.getElementById('complaintForm').reset();
+        }
+
+        async function submitComplaint(event) {
+            event.preventDefault();
+
+            const athlete = JSON.parse(localStorage.getItem('athlete') || '{}');
+            const token = localStorage.getItem('athleteToken');
+
+            const complaintData = {
+                certHash: document.getElementById('complaintCertHash').value,
+                name: athlete.name || athlete.fullName || 'Athlete',
+                email: athlete.email || '',
+                type: document.getElementById('complaintType').value,
+                description: document.getElementById('complaintDescription').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/complaints/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(complaintData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage('Complaint submitted successfully! We will review it and get back to you.', 'success');
+                    closeComplaintModal();
+                } else {
+                    showMessage('Failed to submit complaint: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error submitting complaint:', error);
+                showMessage('Error submitting complaint: ' + error.message, 'error');
+            }
+        }
+
+        // Close complaint modal when clicking outside
+        window.addEventListener('click', function(event) {
+            const complaintModal = document.getElementById('complaintModal');
+            if (event.target === complaintModal) {
+                closeComplaintModal();
+            }
+        });
     </script>
 </body>
 </html>

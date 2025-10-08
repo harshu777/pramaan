@@ -424,6 +424,46 @@
         </div>
     </div>
 
+    <!-- Complaint Modal -->
+    <div class="modal" id="complaintModal" style="display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; border-radius: 15px; padding: 2rem; width: 90%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="color: #333; font-size: 1.5rem;">Raise Complaint</h2>
+                <span onclick="closeComplaintModal()" style="font-size: 2rem; cursor: pointer; color: #999;">&times;</span>
+            </div>
+            <form id="complaintForm">
+                <input type="hidden" id="complaintCertHash" name="certHash">
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Your Name *</label>
+                    <input type="text" id="complaintName" name="name" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Email *</label>
+                    <input type="email" id="complaintEmail" name="email" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                </div>
+                <div style="margin-bottom: 1rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Complaint Type *</label>
+                    <select id="complaintType" name="type" required style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                        <option value="">Select Type</option>
+                        <option value="incorrect_info">Incorrect Information</option>
+                        <option value="fraudulent">Fraudulent Certificate</option>
+                        <option value="unauthorized">Unauthorized Use</option>
+                        <option value="technical">Technical Issue</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Description *</label>
+                    <textarea id="complaintDescription" name="description" required rows="5" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical;"></textarea>
+                </div>
+                <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+                    <button type="button" onclick="closeComplaintModal()" style="padding: 0.75rem 1.5rem; border: 2px solid #ddd; border-radius: 8px; background: white; color: #666; cursor: pointer; font-size: 1rem; font-weight: 600;">Cancel</button>
+                    <button type="submit" style="padding: 0.75rem 1.5rem; border: none; border-radius: 8px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; cursor: pointer; font-size: 1rem; font-weight: 600;">Submit Complaint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE_URL = window.location.origin + '/api';
 
@@ -591,8 +631,9 @@
                         </div>
                     ` : ''}
                     <div class="result-actions">
-                        <a href="${API_BASE_URL}/certificates/verify/${cert.certificateHash}" target="_blank" class="action-btn">View Full Details</a>
-                        <a href="${API_BASE_URL}/certificates/download/${cert.certificateHash}" class="action-btn">Download Certificate</a>
+                        <button class="action-btn" onclick="validateByHashButton('${cert.certificateHash}')">Validate</button>
+                        <a href="${API_BASE_URL}/certificates/verify/${cert.certificateHash}" target="_blank" class="action-btn">View Details</a>
+                        <button class="action-btn" onclick="raiseComplaint('${cert.certificateHash}')">Raise Complaint</button>
                     </div>
                 </div>
             `;
@@ -644,6 +685,7 @@
                         <div class="result-actions">
                             <button class="action-btn" onclick="document.getElementById('hashInput').value='${cert.cert_hash}'; showTab('hash'); validateByHash();">Validate</button>
                             <a href="${API_BASE_URL}/certificates/verify/${cert.cert_hash}" target="_blank" class="action-btn">View Details</a>
+                            <button class="action-btn" onclick="raiseComplaint('${cert.cert_hash}')">Raise Complaint</button>
                         </div>
                     </div>
                 `;
@@ -689,6 +731,57 @@
             if (hash) {
                 document.getElementById('hashInput').value = hash;
                 validateByHash();
+            }
+        });
+
+        // Raise Complaint Functions
+        function raiseComplaint(certHash) {
+            document.getElementById('complaintCertHash').value = certHash;
+            document.getElementById('complaintModal').style.display = 'flex';
+        }
+
+        function closeComplaintModal() {
+            document.getElementById('complaintModal').style.display = 'none';
+            document.getElementById('complaintForm').reset();
+        }
+
+        function validateByHashButton(certHash) {
+            document.getElementById('hashInput').value = certHash;
+            showTab('hash');
+            validateByHash();
+        }
+
+        // Handle complaint form submission
+        document.getElementById('complaintForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = {
+                certHash: document.getElementById('complaintCertHash').value,
+                name: document.getElementById('complaintName').value,
+                email: document.getElementById('complaintEmail').value,
+                type: document.getElementById('complaintType').value,
+                description: document.getElementById('complaintDescription').value
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/complaints/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Complaint submitted successfully! We will review it and get back to you.');
+                    closeComplaintModal();
+                } else {
+                    alert('Failed to submit complaint: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error submitting complaint: ' + error.message);
             }
         });
     </script>

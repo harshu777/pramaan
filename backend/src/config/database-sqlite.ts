@@ -95,6 +95,22 @@ export async function initializeDatabase(): Promise<void> {
         FOREIGN KEY (certificate_id) REFERENCES certificates(id)
       );
 
+      CREATE TABLE IF NOT EXISTS complaints (
+        id TEXT PRIMARY KEY,
+        cert_hash TEXT NOT NULL,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL,
+        type TEXT NOT NULL,
+        description TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        resolution TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        resolved_at DATETIME,
+        resolved_by TEXT,
+        FOREIGN KEY (cert_hash) REFERENCES certificates(cert_hash)
+      );
+
       CREATE INDEX IF NOT EXISTS idx_cert_hash ON certificates(cert_hash);
       CREATE INDEX IF NOT EXISTS idx_issuer_did ON certificates(issuer_did);
       CREATE INDEX IF NOT EXISTS idx_subject_name ON certificates(subject_name);
@@ -102,6 +118,8 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_athlete_phone ON athletes(phone_number);
       CREATE INDEX IF NOT EXISTS idx_certificate_assignments_athlete ON certificate_assignments(athlete_id);
       CREATE INDEX IF NOT EXISTS idx_certificate_assignments_cert ON certificate_assignments(certificate_id);
+      CREATE INDEX IF NOT EXISTS idx_complaints_cert_hash ON complaints(cert_hash);
+      CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
     `);
 
     // Insert default issuer with hashed password

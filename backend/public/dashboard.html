@@ -534,6 +534,9 @@
                     <li onclick="autoAssignCertificates()">
                         🤖 Auto-Assign Certificates
                     </li>
+                    <li onclick="showComplaintsSupport()">
+                        🎧 Support / Complaints
+                    </li>
                     <li onclick="showCreateFolderModal()">
                         ➕ Create Folder
                     </li>
@@ -565,7 +568,7 @@
                     <input type="text" id="searchInput" placeholder="Search certificates..." onkeyup="searchCertificates()">
                 </div>
                 <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="showIssueModal()">Issue Certificate</button>
+                    <button class="btn btn-primary" onclick="showIssueModal()">Upload Document</button>
                     <button class="btn btn-secondary" onclick="showMoveModal()">Move Selected</button>
                     <button class="btn btn-secondary" onclick="downloadSelected()">Download Selected</button>
                 </div>
@@ -598,7 +601,7 @@
 
             <div class="file-upload-area" onclick="document.getElementById('certificateFile').click()">
                 <div class="upload-icon">📤</div>
-                <div class="upload-text">Upload existing certificate (optional)</div>
+                <div class="upload-text">Upload existing file (optional)</div>
                 <input type="file" id="certificateFile" class="file-input" accept=".pdf,.jpg,.jpeg,.png" onchange="handleFileSelect(event)">
             </div>
 
@@ -1246,6 +1249,316 @@
             } catch (error) {
                 alert('Error during auto-assignment: ' + error.message);
             }
+        }
+
+        // Show Complaints/Support Modal
+        async function showComplaintsSupport() {
+            const token = localStorage.getItem('token');
+
+            try {
+                // Fetch complaints
+                const response = await fetch(`${API_BASE}/complaints/all`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                const complaints = result.complaints || [];
+
+                // Fetch statistics
+                const statsResponse = await fetch(`${API_BASE}/complaints/stats/summary`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                const statsResult = await statsResponse.json();
+                const stats = statsResult.stats || {};
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="complaintsModalOverlay" onclick="if(event.target.id==='complaintsModalOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:1000px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">Support & Complaints Management</h2>
+                                <button onclick="document.getElementById('complaintsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+
+                            <!-- Statistics -->
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:25px;">
+                                <div style="background:#f8f9fa;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#333;">${stats.total || 0}</div>
+                                    <div style="color:#666;font-size:14px;">Total</div>
+                                </div>
+                                <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#856404;">${stats.pending || 0}</div>
+                                    <div style="color:#666;font-size:14px;">Pending</div>
+                                </div>
+                                <div style="background:#cfe2ff;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#084298;">${stats.in_progress || 0}</div>
+                                    <div style="color:#666;font-size:14px;">In Progress</div>
+                                </div>
+                                <div style="background:#d1e7dd;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#0f5132;">${stats.resolved || 0}</div>
+                                    <div style="color:#666;font-size:14px;">Resolved</div>
+                                </div>
+                                <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#842029;">${stats.rejected || 0}</div>
+                                    <div style="color:#666;font-size:14px;">Rejected</div>
+                                </div>
+                            </div>
+
+                            <!-- Filter -->
+                            <div style="margin-bottom:20px;">
+                                <label style="font-weight:600;margin-right:10px;">Filter by Status:</label>
+                                <select id="complaintStatusFilter" onchange="filterComplaintsByStatus()" style="padding:8px;border:1px solid #ddd;border-radius:5px;">
+                                    <option value="">All Complaints</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="in_progress">In Progress</option>
+                                    <option value="resolved">Resolved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <!-- Complaints Table -->
+                            <div style="overflow-x:auto;">
+                                <table id="complaintsTable" style="width:100%;border-collapse:collapse;">
+                                    <thead>
+                                        <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Date</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Name</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Email</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Type</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Certificate</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Status</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="complaintsTableBody">
+                `;
+
+                if (complaints.length === 0) {
+                    modalHTML += '<tr><td colspan="7" style="padding:30px;text-align:center;color:#999;">No complaints found</td></tr>';
+                } else {
+                    complaints.forEach(complaint => {
+                        const statusColors = {
+                            pending: '#fff3cd',
+                            in_progress: '#cfe2ff',
+                            resolved: '#d1e7dd',
+                            rejected: '#f8d7da'
+                        };
+                        const statusColor = statusColors[complaint.status] || '#f8f9fa';
+
+                        const typeLabels = {
+                            incorrect_info: 'Incorrect Info',
+                            fraudulent: 'Fraudulent',
+                            unauthorized: 'Unauthorized',
+                            technical: 'Technical',
+                            other: 'Other'
+                        };
+
+                        modalHTML += `
+                            <tr class="complaint-row" data-status="${complaint.status}" style="border-bottom:1px solid #eee;">
+                                <td style="padding:12px;">${new Date(complaint.created_at).toLocaleDateString()}</td>
+                                <td style="padding:12px;">${complaint.name}</td>
+                                <td style="padding:12px;font-size:0.9em;">${complaint.email}</td>
+                                <td style="padding:12px;">${typeLabels[complaint.type] || complaint.type}</td>
+                                <td style="padding:12px;font-size:0.85em;">${complaint.subject_name || 'N/A'}</td>
+                                <td style="padding:12px;">
+                                    <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${complaint.status.replace('_', ' ').toUpperCase()}</span>
+                                </td>
+                                <td style="padding:12px;">
+                                    <button onclick="viewComplaintDetails('${complaint.id}')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">View</button>
+                                    <button onclick="updateComplaintStatus('${complaint.id}', '${complaint.status}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Update</button>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                modalHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+                // Store complaints data globally for filtering
+                window.complaintsData = complaints;
+
+            } catch (error) {
+                alert('Error loading complaints: ' + error.message);
+            }
+        }
+
+        // Filter complaints by status
+        function filterComplaintsByStatus() {
+            const filterValue = document.getElementById('complaintStatusFilter').value;
+            const rows = document.querySelectorAll('.complaint-row');
+
+            rows.forEach(row => {
+                if (!filterValue || row.dataset.status === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        // View complaint details
+        async function viewComplaintDetails(complaintId) {
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${API_BASE}/complaints/${complaintId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                const complaint = result.complaint;
+
+                if (!complaint) {
+                    alert('Complaint not found');
+                    return;
+                }
+
+                const detailsHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="complaintDetailsOverlay" onclick="if(event.target.id==='complaintDetailsOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:600px;width:90%;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                            <h3 style="margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:10px;">Complaint Details</h3>
+                            <div style="margin-bottom:15px;">
+                                <strong>ID:</strong> ${complaint.id}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Name:</strong> ${complaint.name}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Email:</strong> ${complaint.email}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Type:</strong> ${complaint.type.replace('_', ' ').toUpperCase()}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Certificate:</strong> ${complaint.subject_name || 'N/A'} (${complaint.certificate_type || 'N/A'})
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Status:</strong> ${complaint.status.replace('_', ' ').toUpperCase()}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Created:</strong> ${new Date(complaint.created_at).toLocaleString()}
+                            </div>
+                            <div style="margin-bottom:15px;">
+                                <strong>Description:</strong>
+                                <div style="background:#f8f9fa;padding:15px;border-radius:5px;margin-top:8px;white-space:pre-wrap;">${complaint.description}</div>
+                            </div>
+                            ${complaint.resolution ? `
+                            <div style="margin-bottom:15px;">
+                                <strong>Resolution:</strong>
+                                <div style="background:#d1e7dd;padding:15px;border-radius:5px;margin-top:8px;white-space:pre-wrap;">${complaint.resolution}</div>
+                            </div>
+                            ` : ''}
+                            <div style="margin-top:20px;text-align:right;">
+                                <button onclick="document.getElementById('complaintDetailsOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', detailsHTML);
+
+            } catch (error) {
+                alert('Error loading complaint details: ' + error.message);
+            }
+        }
+
+        // Update complaint status
+        async function updateComplaintStatus(complaintId, currentStatus) {
+            // Create update modal
+            const updateModalHTML = `
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10002;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="updateComplaintOverlay" onclick="if(event.target.id==='updateComplaintOverlay')this.remove()">
+                    <div style="background:white;border-radius:10px;padding:30px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <h3 style="margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:10px;">Update Complaint Status</h3>
+                        <form id="updateComplaintForm">
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Status *</label>
+                                <select id="newComplaintStatus" required style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:15px;">
+                                    <option value="pending" ${currentStatus === 'pending' ? 'selected' : ''}>Pending</option>
+                                    <option value="in_progress" ${currentStatus === 'in_progress' ? 'selected' : ''}>In Progress</option>
+                                    <option value="resolved" ${currentStatus === 'resolved' ? 'selected' : ''}>Resolved</option>
+                                    <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+                                </select>
+                            </div>
+                            <div style="margin-bottom:20px;" id="resolutionFieldContainer">
+                                <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Resolution Notes</label>
+                                <textarea id="complaintResolution" rows="5" style="width:100%;padding:10px;border:2px solid #ddd;border-radius:5px;font-size:15px;resize:vertical;" placeholder="Enter resolution details or admin notes..."></textarea>
+                            </div>
+                            <div style="display:flex;gap:10px;justify-content:flex-end;">
+                                <button type="button" onclick="document.getElementById('updateComplaintOverlay').remove()" style="padding:10px 20px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Cancel</button>
+                                <button type="submit" style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Update Status</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', updateModalHTML);
+
+            // Show/hide resolution field based on status
+            const statusSelect = document.getElementById('newComplaintStatus');
+            const resolutionContainer = document.getElementById('resolutionFieldContainer');
+
+            statusSelect.addEventListener('change', function() {
+                const selectedStatus = this.value;
+                if (selectedStatus === 'resolved' || selectedStatus === 'rejected') {
+                    resolutionContainer.style.display = 'block';
+                } else {
+                    resolutionContainer.style.display = 'block'; // Always show for admin notes
+                }
+            });
+
+            // Handle form submission
+            document.getElementById('updateComplaintForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const newStatus = document.getElementById('newComplaintStatus').value;
+                const resolution = document.getElementById('complaintResolution').value.trim();
+
+                const token = localStorage.getItem('token');
+
+                try {
+                    const response = await fetch(`${API_BASE}/complaints/${complaintId}/status`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            status: newStatus,
+                            resolution: resolution || null,
+                            resolvedBy: 'Admin'
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        showToast('Complaint status updated successfully!');
+                        // Close the update modal
+                        document.getElementById('updateComplaintOverlay').remove();
+                        // Refresh the complaints modal
+                        document.getElementById('complaintsModalOverlay')?.remove();
+                        showComplaintsSupport();
+                    } else {
+                        alert('Error updating complaint: ' + result.message);
+                    }
+                } catch (error) {
+                    alert('Error updating complaint: ' + error.message);
+                }
+            });
         }
     </script>
 </body>
