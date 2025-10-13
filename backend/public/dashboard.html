@@ -299,6 +299,10 @@
             color: #856404;
         }
 
+        .status-revoked {
+            background: #f8d7da;
+            color: #721c24;
+        }
 
         .certificate-actions {
             display: flex;
@@ -520,6 +524,10 @@
                     ⏰ Expired
                     <span class="folder-count" id="countExpired">0</span>
                 </li>
+                <li onclick="filterByFolder('revoked')">
+                    ❌ Revoked / Invalid
+                    <span class="folder-count" id="countRevoked">0</span>
+                </li>
             </ul>
 
             <div style="margin-top: 30px;">
@@ -559,6 +567,10 @@
                 <div class="stat-card">
                     <div class="stat-value" id="expiredCerts">0</div>
                     <div class="stat-label">Expired</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="revokedCerts">0</div>
+                    <div class="stat-label">Revoked</div>
                 </div>
             </div>
 
@@ -693,6 +705,29 @@
         </div>
     </div>
 
+    <!-- Revoke Certificate Modal -->
+    <div class="modal" id="revokeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Revoke Certificate</h2>
+                <span class="modal-close" onclick="closeModal('revokeModal')">×</span>
+            </div>
+            <form id="revokeForm">
+                <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; color: #856404;">
+                    <strong>⚠️ Warning:</strong> This action cannot be undone. The certificate will be permanently revoked on the blockchain.
+                </div>
+                <div class="form-group">
+                    <label>Revocation Reason *</label>
+                    <textarea id="revocationReason" required placeholder="Please provide a reason for revoking this certificate..." style="min-height: 120px;"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('revokeModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #dc3545;">Revoke Certificate</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div class="toast" id="toast"></div>
 
@@ -731,15 +766,18 @@
         function updateStats() {
             const total = certificates.length;
             const active = certificates.filter(c => c.status === 'active' && !isExpired(c)).length;
-            const expired = certificates.filter(c => isExpired(c)).length;
+            const expired = certificates.filter(c => isExpired(c) && c.status !== 'revoked').length;
+            const revoked = certificates.filter(c => c.status === 'revoked').length;
 
             document.getElementById('totalCerts').textContent = total;
             document.getElementById('activeCerts').textContent = active;
             document.getElementById('expiredCerts').textContent = expired;
+            document.getElementById('revokedCerts').textContent = revoked;
 
             document.getElementById('countAll').textContent = total;
             document.getElementById('countActive').textContent = active;
             document.getElementById('countExpired').textContent = expired;
+            document.getElementById('countRevoked').textContent = revoked;
         }
 
         // Check if certificate is expired
@@ -757,7 +795,9 @@
             if (currentFolder === 'active') {
                 filtered = certificates.filter(c => c.status === 'active' && !isExpired(c));
             } else if (currentFolder === 'expired') {
-                filtered = certificates.filter(c => isExpired(c));
+                filtered = certificates.filter(c => isExpired(c) && c.status !== 'revoked');
+            } else if (currentFolder === 'revoked') {
+                filtered = certificates.filter(c => c.status === 'revoked');
             }
 
             if (filtered.length === 0) {
@@ -770,7 +810,7 @@
             emptyState.style.display = 'none';
 
             grid.innerHTML = filtered.map(cert => {
-                const status = isExpired(cert) ? 'expired' : 'active';
+                const status = cert.status === 'revoked' ? 'revoked' : (isExpired(cert) ? 'expired' : 'active');
                 const isSelected = selectedCertificates.has(cert.cert_hash);
 
                 return `
@@ -787,6 +827,7 @@
                             <button onclick="viewCertificate('${cert.cert_hash}')">View</button>
                             <button onclick="showQR('${cert.cert_hash}')">QR Code</button>
                             <button onclick="downloadCertificate('${cert.cert_hash}')">Download</button>
+                            ${cert.status !== 'revoked' ? `<button onclick="revokeCertificate('${cert.cert_hash}')" style="background: #ff4444; color: white;">Revoke</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -1055,6 +1096,55 @@
                 toast.classList.remove('show');
             }, 3000);
         }
+
+        // Revoke Certificate
+        let certificateToRevoke = null;
+
+        function revokeCertificate(certHash) {
+            event.stopPropagation();
+            certificateToRevoke = certHash;
+            showModal('revokeModal');
+        }
+
+        // Handle Revoke Form Submission
+        document.getElementById('revokeForm').onsubmit = async function(e) {
+            e.preventDefault();
+
+            const reason = document.getElementById('revocationReason').value;
+
+            if (!reason || !certificateToRevoke) {
+                showToast('Please provide a revocation reason');
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`/api/certificates/revoke/${certificateToRevoke}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ reason })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Certificate revoked successfully');
+                    closeModal('revokeModal');
+                    document.getElementById('revocationReason').value = '';
+                    certificateToRevoke = null;
+                    loadCertificates(); // Reload certificates
+                } else {
+                    showToast('Failed to revoke certificate: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('Failed to revoke certificate');
+            }
+        };
 
         // Show Athletes Modal
         async function showAthletesModal() {
