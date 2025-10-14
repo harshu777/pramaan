@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5% Quota Certificate Request - Pramaan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+            padding: 25px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        .form-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .competition-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .competition-table th,
+        .competition-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .competition-table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+
+        .competition-table tr:hover {
+            background: #f5f5f5;
+        }
+
+        .checkbox-cell {
+            text-align: center;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            text-align: center;
+            display: none;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        #submitSection {
+            display: none;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .medal-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .medal-gold {
+            background: #ffd700;
+            color: #000;
+        }
+
+        .medal-silver {
+            background: #c0c0c0;
+            color: #000;
+        }
+
+        .medal-bronze {
+            background: #cd7f32;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/static/athlete-dashboard.html" class="back-link">← Back to Dashboard</a>
+
+        <div class="header">
+            <h1>Request 5% Quota Certificate</h1>
+            <p>Validate your credentials and select competition records to issue certificate</p>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+        <div id="loadingBox" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Processing...</p>
+        </div>
+
+        <!-- Step 1: Validation Form -->
+        <div id="validationSection" class="form-section">
+            <h2>Step 1: Validate Your Credentials</h2>
+            <form id="validationForm">
+                <div class="form-group">
+                    <label for="uniqueId">Unique ID *</label>
+                    <input type="text" id="uniqueId" name="uniqueId" required placeholder="Enter your Unique ID">
+                </div>
+                <div class="form-group">
+                    <label for="aadharNumber">Aadhar Card Number *</label>
+                    <input type="text" id="aadharNumber" name="aadharNumber" required
+                           placeholder="Enter 12-digit Aadhar number" maxlength="12" pattern="[0-9]{12}">
+                </div>
+                <button type="submit" class="btn">Validate & Retrieve Records</button>
+            </form>
+        </div>
+
+        <!-- Step 2: Competition Records Table -->
+        <div id="recordsSection" class="form-section" style="display: none;">
+            <h2>Step 2: Select Competition Records</h2>
+            <p style="margin-bottom: 15px; color: #666;">Select the competition records for which you want to issue the certificate</p>
+            <table class="competition-table" id="competitionTable">
+                <thead>
+                    <tr>
+                        <th class="checkbox-cell">Select</th>
+                        <th>Competition Name</th>
+                        <th>Event</th>
+                        <th>Position</th>
+                        <th>Medal</th>
+                        <th>Level</th>
+                        <th>Date</th>
+                        <th>Location</th>
+                    </tr>
+                </thead>
+                <tbody id="competitionTableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Step 3: Submit Section -->
+        <div id="submitSection">
+            <button id="submitRequestBtn" class="btn">Submit Certificate Request</button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api';
+        let athleteData = null;
+        let competitionRecords = [];
+        let selectedRecords = [];
+
+        // Get token from localStorage
+        const token = localStorage.getItem('athleteToken');
+        if (!token) {
+            window.location.href = '/static/athlete-login.html';
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.className = `message ${type}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Show loading
+        function showLoading(show) {
+            document.getElementById('loadingBox').style.display = show ? 'block' : 'none';
+        }
+
+        // Handle validation form submit
+        document.getElementById('validationForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const uniqueId = document.getElementById('uniqueId').value.trim();
+            const aadharNumber = document.getElementById('aadharNumber').value.trim();
+
+            if (aadharNumber.length !== 12 || !/^\d+$/.test(aadharNumber)) {
+                showMessage('Please enter a valid 12-digit Aadhar number', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/quota-certificates/validate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ uniqueId, aadharNumber })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Validation failed');
+                }
+
+                if (!data.dataFound) {
+                    showMessage(data.message, 'info');
+                    return;
+                }
+
+                // Store data
+                athleteData = data.athlete;
+                competitionRecords = data.competitions;
+
+                // Display competition records
+                displayCompetitionRecords();
+
+                // Hide validation form and show records
+                document.getElementById('validationSection').style.display = 'none';
+                document.getElementById('recordsSection').style.display = 'block';
+                document.getElementById('submitSection').style.display = 'block';
+
+                showMessage('Competition records retrieved successfully!', 'success');
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Display competition records in table
+        function displayCompetitionRecords() {
+            const tbody = document.getElementById('competitionTableBody');
+            tbody.innerHTML = '';
+
+            if (competitionRecords.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" style="text-align: center;">No competition records found</td></tr>';
+                return;
+            }
+
+            competitionRecords.forEach(record => {
+                const tr = document.createElement('tr');
+
+                const medalClass = record.medalType ? `medal-${record.medalType.toLowerCase()}` : '';
+
+                tr.innerHTML = `
+                    <td class="checkbox-cell">
+                        <input type="checkbox" value="${record.id}" class="record-checkbox" data-record-id="${record.id}">
+                    </td>
+                    <td>${record.competitionName}</td>
+                    <td>${record.eventName || 'N/A'}</td>
+                    <td>${record.position || 'N/A'}</td>
+                    <td>${record.medalType ? `<span class="medal-badge ${medalClass}">${record.medalType}</span>` : 'N/A'}</td>
+                    <td>${record.competitionLevel}</td>
+                    <td>${new Date(record.competitionDate).toLocaleDateString()}</td>
+                    <td>${record.location}</td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+
+            // Add event listeners to checkboxes
+            document.querySelectorAll('.record-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', handleCheckboxChange);
+            });
+
+            document.getElementById('competitionTable').style.display = 'table';
+        }
+
+        // Handle checkbox change
+        function handleCheckboxChange(e) {
+            const recordId = e.target.value;
+            if (e.target.checked) {
+                if (!selectedRecords.includes(recordId)) {
+                    selectedRecords.push(recordId);
+                }
+            } else {
+                selectedRecords = selectedRecords.filter(id => id !== recordId);
+            }
+        }
+
+        // Handle submit request
+        document.getElementById('submitRequestBtn').addEventListener('click', async () => {
+            if (selectedRecords.length === 0) {
+                showMessage('Please select at least one competition record', 'error');
+                return;
+            }
+
+            if (!confirm(`Are you sure you want to submit a certificate request for ${selectedRecords.length} competition record(s)?`)) {
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/quota-certificates/request`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        uniqueId: athleteData.uniqueId,
+                        aadharNumber: athleteData.aadharNumber,
+                        selectedRecords: selectedRecords
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Request submission failed');
+                }
+
+                showMessage(data.message, 'success');
+
+                // Redirect to dashboard after 2 seconds
+                setTimeout(() => {
+                    window.location.href = '/static/athlete-dashboard.html';
+                }, 2000);
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+    </script>
+</body>
+</html>

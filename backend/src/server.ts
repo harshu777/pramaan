@@ -12,6 +12,8 @@ import athleteRoutes from './routes/athleteRoutes';
 import bulkUploadRoutes from './routes/bulkUploadRoutes';
 import testEmailRoute from './routes/testEmailRoute';
 import complaintRoutes from './routes/complaintRoutes';
+import quotaCertificateRoutes from './routes/quotaCertificateRoutes';
+import appealRoutes from './routes/appealRoutes';
 import { initializeDatabase } from './config/database-sqlite';
 import { initializeBlockchain } from './services/blockchainService';
 
@@ -49,6 +51,8 @@ app.use('/api/athletes', athleteRoutes);
 app.use('/api/bulk-upload', bulkUploadRoutes);
 app.use('/api/test', testEmailRoute);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/quota-certificates', quotaCertificateRoutes);
+app.use('/api/appeals', appealRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });

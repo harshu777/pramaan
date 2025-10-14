@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Appeals - Pramaan</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 40px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 2rem;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-bottom: 15px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .appeals-container {
+            margin-top: 30px;
+        }
+
+        .appeal-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .appeal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .appeal-id {
+            font-size: 0.9rem;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .status-pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-approved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .level-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .level-1 {
+            background: #e3f2fd;
+            color: #1565c0;
+        }
+
+        .level-2 {
+            background: #fce4ec;
+            color: #c2185b;
+        }
+
+        .appeal-details {
+            color: #555;
+            line-height: 1.6;
+        }
+
+        .appeal-details p {
+            margin-bottom: 8px;
+        }
+
+        .appeal-details strong {
+            color: #333;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .message.info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            display: none;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #666;
+        }
+
+        .empty-state h2 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 30px;
+            border-radius: 10px;
+            max-width: 600px;
+        }
+
+        .modal-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .modal-header h2 {
+            color: #2c3e50;
+        }
+
+        .close {
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .close:hover {
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+            min-height: 120px;
+        }
+
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196f3;
+        }
+
+        .info-box p {
+            margin-bottom: 8px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/static/athlete-dashboard.html" class="back-link">← Back to Dashboard</a>
+
+        <div class="header">
+            <h1>My Appeals</h1>
+            <button class="btn" onclick="showNewAppealModal()">File New Appeal</button>
+        </div>
+
+        <div id="messageBox" class="message"></div>
+        <div id="loadingBox" class="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px;">Loading appeals...</p>
+        </div>
+
+        <div class="appeals-container" id="appealsContainer">
+        </div>
+    </div>
+
+    <!-- New Appeal Modal -->
+    <div id="newAppealModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2>File New Appeal</h2>
+            </div>
+
+            <div class="info-box">
+                <p><strong>First Appeal:</strong> Submitted to Joint Director, Sports and Youth Services</p>
+                <p><strong>Second Appeal:</strong> Submitted to Commissioner, Sports and Youth Services, Pune</p>
+                <p>You can file a second appeal only if your first appeal was rejected.</p>
+            </div>
+
+            <form id="newAppealForm">
+                <div class="form-group">
+                    <label for="appealLevel">Appeal Level *</label>
+                    <select id="appealLevel" class="form-control" required style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem;">
+                        <option value="">Select Appeal Level</option>
+                        <option value="1">First Appeal (Joint Director)</option>
+                        <option value="2">Second Appeal (Commissioner)</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="appealReason">Reason for Appeal *</label>
+                    <textarea id="appealReason" required placeholder="Explain why you are filing this appeal..."></textarea>
+                </div>
+
+                <div style="text-align: right;">
+                    <button type="button" class="btn" style="background: #ccc; color: #333; margin-right: 10px;" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn">Submit Appeal</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api';
+
+        // Get token from localStorage
+        const token = localStorage.getItem('athleteToken');
+        if (!token) {
+            window.location.href = '/static/athlete-login.html';
+        }
+
+        // Show message
+        function showMessage(message, type) {
+            const messageBox = document.getElementById('messageBox');
+            messageBox.textContent = message;
+            messageBox.className = `message ${type}`;
+            messageBox.style.display = 'block';
+            setTimeout(() => {
+                messageBox.style.display = 'none';
+            }, 5000);
+        }
+
+        // Show loading
+        function showLoading(show) {
+            document.getElementById('loadingBox').style.display = show ? 'block' : 'none';
+        }
+
+        // Show modal
+        function showNewAppealModal() {
+            document.getElementById('newAppealModal').style.display = 'block';
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('newAppealModal').style.display = 'none';
+            document.getElementById('newAppealForm').reset();
+        }
+
+        // Fetch appeals
+        async function fetchAppeals() {
+            showLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/appeals/my-appeals`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to fetch appeals');
+                }
+
+                displayAppeals(data.appeals || []);
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Display appeals
+        function displayAppeals(appeals) {
+            const container = document.getElementById('appealsContainer');
+            container.innerHTML = '';
+
+            if (appeals.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h2>No Appeals Yet</h2>
+                        <p>You haven't filed any appeals. If your certificate request was rejected, you can file an appeal using the button above.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            appeals.forEach(appeal => {
+                const levelText = appeal.appealLevel === 1 ? 'First Appeal (Joint Director)' : 'Second Appeal (Commissioner)';
+                const levelClass = `level-${appeal.appealLevel}`;
+                const statusClass = `status-${appeal.status}`;
+
+                const card = document.createElement('div');
+                card.className = 'appeal-card';
+
+                card.innerHTML = `
+                    <div class="appeal-header">
+                        <div>
+                            <span class="level-badge ${levelClass}">${levelText}</span>
+                            <div class="appeal-id">Appeal ID: ${appeal.id}</div>
+                        </div>
+                        <span class="status-badge ${statusClass}">${appeal.status.toUpperCase()}</span>
+                    </div>
+                    <div class="appeal-details">
+                        <p><strong>Filed Date:</strong> ${new Date(appeal.createdAt).toLocaleString()}</p>
+                        <p><strong>Reason:</strong> ${appeal.reason}</p>
+                        ${appeal.resolution ? `
+                            <p><strong>Resolution:</strong> ${appeal.resolution}</p>
+                            <p><strong>Resolved Date:</strong> ${new Date(appeal.resolvedAt).toLocaleString()}</p>
+                        ` : '<p><strong>Status:</strong> Your appeal is being reviewed</p>'}
+                        ${appeal.status === 'approved' ? `
+                            <p style="color: #27ae60; font-weight: 600; margin-top: 10px;">
+                                ✓ Your appeal has been approved. You can now reapply for the certificate.
+                            </p>
+                        ` : ''}
+                    </div>
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // Handle new appeal form submission
+        document.getElementById('newAppealForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const appealLevel = parseInt(document.getElementById('appealLevel').value);
+            const reason = document.getElementById('appealReason').value.trim();
+
+            if (!appealLevel || !reason) {
+                showMessage('Please fill in all required fields', 'error');
+                return;
+            }
+
+            showLoading(true);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/appeals/create`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        appealLevel,
+                        reason
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.message || 'Failed to create appeal');
+                }
+
+                showMessage(data.message, 'success');
+                closeModal();
+                fetchAppeals();
+
+            } catch (error) {
+                showMessage(error.message, 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Close modal on outside click
+        window.addEventListener('click', (e) => {
+            if (e.target.id === 'newAppealModal') {
+                closeModal();
+            }
+        });
+
+        // Initialize
+        fetchAppeals();
+    </script>
+</body>
+</html>

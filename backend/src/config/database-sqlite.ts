@@ -52,6 +52,8 @@ export async function initializeDatabase(): Promise<void> {
 
       CREATE TABLE IF NOT EXISTS athletes (
         id TEXT PRIMARY KEY,
+        unique_id TEXT UNIQUE,
+        aadhar_number TEXT UNIQUE,
         full_name TEXT NOT NULL,
         email TEXT UNIQUE NOT NULL,
         phone_number TEXT,
@@ -111,15 +113,79 @@ export async function initializeDatabase(): Promise<void> {
         FOREIGN KEY (cert_hash) REFERENCES certificates(cert_hash)
       );
 
+      CREATE TABLE IF NOT EXISTS athlete_competitions (
+        id TEXT PRIMARY KEY,
+        athlete_id TEXT,
+        unique_id TEXT,
+        aadhar_number TEXT,
+        competition_name TEXT NOT NULL,
+        competition_type TEXT NOT NULL,
+        event_name TEXT,
+        position INTEGER,
+        medal_type TEXT,
+        competition_date TEXT,
+        competition_level TEXT,
+        organizing_body TEXT,
+        location TEXT,
+        certificate_issued BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (athlete_id) REFERENCES athletes(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS quota_certificate_requests (
+        id TEXT PRIMARY KEY,
+        athlete_id TEXT NOT NULL,
+        unique_id TEXT NOT NULL,
+        aadhar_number TEXT NOT NULL,
+        selected_records TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        certificate_id TEXT,
+        admin_notes TEXT,
+        requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        processed_at DATETIME,
+        processed_by TEXT,
+        FOREIGN KEY (athlete_id) REFERENCES athletes(id),
+        FOREIGN KEY (certificate_id) REFERENCES certificates(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS certificate_appeals (
+        id TEXT PRIMARY KEY,
+        request_id TEXT,
+        athlete_id TEXT NOT NULL,
+        appeal_type TEXT NOT NULL,
+        appeal_level INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        supporting_documents TEXT,
+        status TEXT DEFAULT 'pending',
+        resolution TEXT,
+        resolved_by TEXT,
+        resolved_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (request_id) REFERENCES quota_certificate_requests(id),
+        FOREIGN KEY (athlete_id) REFERENCES athletes(id)
+      );
+
       CREATE INDEX IF NOT EXISTS idx_cert_hash ON certificates(cert_hash);
       CREATE INDEX IF NOT EXISTS idx_issuer_did ON certificates(issuer_did);
       CREATE INDEX IF NOT EXISTS idx_subject_name ON certificates(subject_name);
       CREATE INDEX IF NOT EXISTS idx_athlete_email ON athletes(email);
       CREATE INDEX IF NOT EXISTS idx_athlete_phone ON athletes(phone_number);
+      CREATE INDEX IF NOT EXISTS idx_athlete_unique_id ON athletes(unique_id);
+      CREATE INDEX IF NOT EXISTS idx_athlete_aadhar ON athletes(aadhar_number);
       CREATE INDEX IF NOT EXISTS idx_certificate_assignments_athlete ON certificate_assignments(athlete_id);
       CREATE INDEX IF NOT EXISTS idx_certificate_assignments_cert ON certificate_assignments(certificate_id);
       CREATE INDEX IF NOT EXISTS idx_complaints_cert_hash ON complaints(cert_hash);
       CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+      CREATE INDEX IF NOT EXISTS idx_competitions_athlete ON athlete_competitions(athlete_id);
+      CREATE INDEX IF NOT EXISTS idx_competitions_unique_id ON athlete_competitions(unique_id);
+      CREATE INDEX IF NOT EXISTS idx_competitions_aadhar ON athlete_competitions(aadhar_number);
+      CREATE INDEX IF NOT EXISTS idx_quota_requests_athlete ON quota_certificate_requests(athlete_id);
+      CREATE INDEX IF NOT EXISTS idx_quota_requests_status ON quota_certificate_requests(status);
+      CREATE INDEX IF NOT EXISTS idx_appeals_athlete ON certificate_appeals(athlete_id);
+      CREATE INDEX IF NOT EXISTS idx_appeals_request ON certificate_appeals(request_id);
+      CREATE INDEX IF NOT EXISTS idx_appeals_status ON certificate_appeals(status);
+      CREATE INDEX IF NOT EXISTS idx_appeals_level ON certificate_appeals(appeal_level);
     `);
 
     // Insert default issuer with hashed password
@@ -141,6 +207,12 @@ export async function initializeDatabase(): Promise<void> {
     ]);
 
     logger.info('SQLite database initialized');
+
+    // Check if we should seed competition data
+    if (process.env.SEED_COMPETITION_DATA === 'true') {
+      const { seedCompetitionData } = await import('../utils/seedCompetitionData');
+      await seedCompetitionData();
+    }
   } catch (error) {
     logger.error('Database initialization failed:', error);
     throw error;
