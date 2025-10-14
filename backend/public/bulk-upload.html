@@ -328,30 +328,15 @@
                 <strong>Instructions:</strong>
                 <ul style="margin-left: 1.5rem; margin-top: 0.5rem;">
                     <li>Download the template Excel file to see the required format</li>
-                    <li>Fill in the certificate data for each recipient</li>
-                    <li>Include email addresses to automatically send certificates</li>
+                    <li>Fill in the athlete competition data for each record</li>
+                    <li>Data will be stored and certificates will be generated upon athlete request</li>
                     <li>Upload the completed Excel file (.xlsx or .xls)</li>
                 </ul>
             </div>
 
             <div class="form-group">
-                <label for="issuerDid">Issuer DID *</label>
-                <input type="text" id="issuerDid" class="form-control" placeholder="did:example:123456789" required>
-            </div>
-
-            <div class="form-group">
-                <label for="issuerName">Issuer Name *</label>
-                <input type="text" id="issuerName" class="form-control" placeholder="Sports and Youth Services, Maharashtra State" required>
-            </div>
-
-            <div class="form-group">
                 <label for="certificateType">Certificate Type *</label>
-                <input type="text" id="certificateType" class="form-control" placeholder="Sports Achievement Certificate" required>
-            </div>
-
-            <div class="form-group">
-                <label for="expiryDate">Expiry Date (Optional)</label>
-                <input type="date" id="expiryDate" class="form-control">
+                <input type="text" id="certificateType" class="form-control" placeholder="Sports Achievement Certificate" value="Sports Achievement Certificate" required>
             </div>
 
             <div class="upload-area" onclick="document.getElementById('fileInput').click()">
@@ -528,24 +513,18 @@
                 return;
             }
 
-            const issuerDid = document.getElementById('issuerDid').value.trim();
-            const issuerName = document.getElementById('issuerName').value.trim();
             const certificateType = document.getElementById('certificateType').value.trim();
-            const expiryDate = document.getElementById('expiryDate').value;
 
-            if (!issuerDid || !issuerName || !certificateType) {
-                alert('Please fill in all required fields');
+            if (!certificateType) {
+                alert('Please fill in the certificate type');
                 return;
             }
 
             const formData = new FormData();
             formData.append('file', selectedFile);
-            formData.append('issuerDid', issuerDid);
-            formData.append('issuerName', issuerName);
+            formData.append('issuerDid', 'system'); // Default system issuer
+            formData.append('issuerName', 'Directorate of Sports and Youth Services, Maharashtra'); // Default issuer name
             formData.append('certificateType', certificateType);
-            if (expiryDate) {
-                formData.append('expiryDate', expiryDate);
-            }
 
             document.getElementById('progressSection').classList.add('show');
             updateProgress(0, 'Starting upload...');

@@ -426,19 +426,30 @@
 
         <!-- Certificates -->
         <div class="certificates-container">
-            <div class="certificates-header">
-                <h2>My Certificates (<span id="certificateCount">0</span>)</h2>
+            <div class="certificates-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <h2>My Competition Records (<span id="certificateCount">0</span>)</h2>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                    <button class="btn" style="background: #667eea; color: white;" onclick="showIssuedCertificates()">
+                        Issued Certificates
+                    </button>
+                    <button class="btn" style="background: #28a745; color: white;" onclick="showCertificateRequests()">
+                        My Requests
+                    </button>
+                    <button class="btn" style="background: #ff6b6b; color: white;" onclick="showAppeals()">
+                        My Appeals
+                    </button>
+                </div>
             </div>
 
             <div id="loadingState" class="loading">
                 <div class="loader"></div>
-                <p>Loading your certificates...</p>
+                <p>Loading your records...</p>
             </div>
 
             <div id="emptyState" class="empty-state" style="display: none;">
                 <div class="empty-state-icon">📜</div>
-                <h3>No Certificates Found</h3>
-                <p>You don't have any certificates yet.</p>
+                <h3>No Records Found</h3>
+                <p>You don't have any competition records yet.</p>
             </div>
 
             <div id="certificateGrid" class="certificate-grid" style="display: none;"></div>
@@ -483,6 +494,11 @@
                         <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Description *</label>
                         <textarea id="complaintDescription" required rows="5" style="width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; resize: vertical;" placeholder="Please describe your complaint in detail..."></textarea>
                     </div>
+                    <div style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333;">Supporting Documents (Optional)</label>
+                        <input type="file" id="complaintDocuments" multiple accept=".jpg,.jpeg,.png,.pdf,.doc,.docx" style="width: 100%; padding: 0.5rem; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.9rem;">
+                        <small style="color: #666; font-size: 0.85rem;">You can upload up to 5 files (images, PDFs, Word documents). Max 10MB per file.</small>
+                    </div>
                     <div style="display: flex; gap: 1rem; justify-content: flex-end;">
                         <button type="button" onclick="closeComplaintModal()" class="btn" style="background: #6c757d; color: white;">Cancel</button>
                         <button type="submit" class="btn" style="background: #ff6b6b; color: white;">Submit Complaint</button>
@@ -521,7 +537,7 @@
             window.location.href = '/static/athlete-login.html';
         }
 
-        // Load certificates from API
+        // Load competition records from API (NEW WORKFLOW)
         async function loadCertificates() {
             const token = localStorage.getItem('athleteToken');
             const loadingState = document.getElementById('loadingState');
@@ -533,7 +549,8 @@
             certificateGrid.style.display = 'none';
 
             try {
-                const response = await fetch(`${API_BASE}/athletes/certificates`, {
+                // Load competition records (not issued certificates)
+                const response = await fetch(`${API_BASE}/athletes/my-records`, {
                     method: 'GET',
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -549,10 +566,10 @@
                         setTimeout(() => handleLogout(), 2000);
                         return;
                     }
-                    throw new Error(result.message || 'Failed to load certificates');
+                    throw new Error(result.message || 'Failed to load records');
                 }
 
-                allCertificates = result.certificates || [];
+                allCertificates = result.records || [];
                 filteredCertificates = [...allCertificates];
 
                 loadingState.style.display = 'none';
@@ -567,9 +584,9 @@
                 updateCertificateCount();
 
             } catch (error) {
-                console.error('Error loading certificates:', error);
+                console.error('Error loading records:', error);
                 loadingState.style.display = 'none';
-                showMessage(error.message || 'Failed to load certificates', 'error');
+                showMessage(error.message || 'Failed to load competition records', 'error');
             }
         }
 
@@ -586,52 +603,73 @@
             updateCertificateCount();
         }
 
-        // Create certificate card element
-        function createCertificateCard(cert) {
+        // Create certificate card element (Updated for competition records)
+        function createCertificateCard(record) {
             const card = document.createElement('div');
             card.className = 'certificate-card';
 
-            const status = determineStatus(cert);
-            const statusClass = `status-${status.toLowerCase()}`;
+            const status = determineRecordStatus(record);
+            const statusClass = `status-${status.type}`;
 
             card.innerHTML = `
                 <div class="certificate-header">
-                    <div class="certificate-type">${escapeHtml(cert.certificateType || 'Certificate')}</div>
-                    <span class="status-badge ${statusClass}">${status}</span>
+                    <div class="certificate-type">${escapeHtml(record.gameName || 'Competition Record')}</div>
+                    <span class="status-badge ${statusClass}">${status.label}</span>
                 </div>
                 <div class="certificate-info">
                     <div class="info-row">
-                        <span class="info-label">Issuer:</span>
-                        <span class="info-value">${escapeHtml(cert.issuer || 'N/A')}</span>
+                        <span class="info-label">Competition:</span>
+                        <span class="info-value">${escapeHtml(record.competitionName || 'N/A')}</span>
                     </div>
                     <div class="info-row">
-                        <span class="info-label">Issue Date:</span>
-                        <span class="info-value">${formatDate(cert.issueDate || cert.uploadedAt)}</span>
+                        <span class="info-label">Level:</span>
+                        <span class="info-value">${escapeHtml(record.competitionLevel || 'N/A')}</span>
                     </div>
-                    ${cert.validUntil ? `
                     <div class="info-row">
-                        <span class="info-label">Valid Until:</span>
-                        <span class="info-value">${formatDate(cert.validUntil)}</span>
+                        <span class="info-label">Position:</span>
+                        <span class="info-value">${escapeHtml(record.positionObtained || 'N/A')}</span>
                     </div>
-                    ` : ''}
+                    <div class="info-row">
+                        <span class="info-label">Period:</span>
+                        <span class="info-value">${escapeHtml(record.competitionPeriod || 'N/A')}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Held At:</span>
+                        <span class="info-value">${escapeHtml(record.competitionHeldAt || 'N/A')}</span>
+                    </div>
                 </div>
                 <div class="certificate-actions">
-                    <button class="btn btn-view" onclick="viewCertificate('${cert.certHash}')">
+                    <button class="btn btn-view" onclick="viewCompetitionRecord('${record.id}')">
                         View Details
                     </button>
-                    <button class="btn btn-download" onclick="downloadCertificate('${cert.certHash}')">
-                        Download
-                    </button>
-                    <button class="btn btn-validate" onclick="validateCertificate('${cert.certHash}')">
-                        Validate
-                    </button>
-                    <button class="btn" style="background: #ff6b6b; color: white;" onclick="raiseComplaint('${cert.certHash}')">
-                        Raise Complaint
-                    </button>
+                    ${record.certificateIssued ? `
+                        <button class="btn btn-download" onclick="downloadIssuedCertificate('${record.id}')">
+                            Download Certificate
+                        </button>
+                    ` : record.certificateRequested ? `
+                        <button class="btn" style="background: #ffc107; color: #333;" disabled>
+                            Request Pending
+                        </button>
+                    ` : `
+                        <button class="btn" style="background: #28a745; color: white;" onclick="requestCertificate('${record.id}')">
+                            Request Certificate
+                        </button>
+                    `}
                 </div>
             `;
 
             return card;
+        }
+
+        // Determine competition record status
+        function determineRecordStatus(record) {
+            if (record.certificateIssued) {
+                return { type: 'active', label: 'Certificate Issued' };
+            } else if (record.certificateRequested) {
+                return { type: 'expired', label: 'Request Pending' };
+            } else {
+                return { type: 'revoked', label: 'Not Requested' };
+            }
         }
 
         // Determine certificate status
@@ -862,28 +900,47 @@
             const athlete = JSON.parse(localStorage.getItem('athlete') || '{}');
             const token = localStorage.getItem('athleteToken');
 
-            const complaintData = {
-                certHash: document.getElementById('complaintCertHash').value,
-                name: athlete.name || athlete.fullName || 'Athlete',
-                email: athlete.email || '',
-                type: document.getElementById('complaintType').value,
-                description: document.getElementById('complaintDescription').value
-            };
+            // Use FormData to support file uploads
+            const formData = new FormData();
+            formData.append('certHash', document.getElementById('complaintCertHash').value);
+            formData.append('name', athlete.name || athlete.fullName || 'Athlete');
+            formData.append('email', athlete.email || '');
+            formData.append('type', document.getElementById('complaintType').value);
+            formData.append('description', document.getElementById('complaintDescription').value);
+
+            // Add uploaded files
+            const fileInput = document.getElementById('complaintDocuments');
+            if (fileInput.files.length > 0) {
+                if (fileInput.files.length > 5) {
+                    showMessage('Maximum 5 files allowed', 'error');
+                    return;
+                }
+
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    const file = fileInput.files[i];
+                    if (file.size > 10 * 1024 * 1024) {
+                        showMessage(`File "${file.name}" is too large. Maximum 10MB per file.`, 'error');
+                        return;
+                    }
+                    formData.append('documents', file);
+                }
+            }
 
             try {
                 const response = await fetch(`${API_BASE}/complaints/create`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
                         'Authorization': `Bearer ${token}`
+                        // Don't set Content-Type header - browser will set it with boundary for multipart/form-data
                     },
-                    body: JSON.stringify(complaintData)
+                    body: formData
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Complaint submitted successfully! We will review it and get back to you.', 'success');
+                    const docMsg = result.documentsUploaded > 0 ? ` (${result.documentsUploaded} document(s) uploaded)` : '';
+                    showMessage(`Complaint submitted successfully${docMsg}! We will review it and get back to you.`, 'success');
                     closeComplaintModal();
                 } else {
                     showMessage('Failed to submit complaint: ' + (result.message || 'Unknown error'), 'error');
@@ -901,6 +958,428 @@
                 closeComplaintModal();
             }
         });
+
+        // NEW FUNCTIONS FOR REQUEST-BASED WORKFLOW
+
+        // View competition record details
+        function viewCompetitionRecord(recordId) {
+            const record = allCertificates.find(r => r.id === recordId);
+            if (!record) return;
+
+            const status = determineRecordStatus(record);
+            const statusClass = `status-${status.type}`;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="detail-row">
+                    <div class="detail-label">Game/Sport</div>
+                    <div class="detail-value">${escapeHtml(record.gameName || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Status</div>
+                    <div class="detail-value">
+                        <span class="status-badge ${statusClass}">${status.label}</span>
+                    </div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Competition Name</div>
+                    <div class="detail-value">${escapeHtml(record.competitionName || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Competition Type</div>
+                    <div class="detail-value">${escapeHtml(record.competitionType || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Competition Level</div>
+                    <div class="detail-value">${escapeHtml(record.competitionLevel || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Position Obtained</div>
+                    <div class="detail-value">${escapeHtml(record.positionObtained || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Competition Period</div>
+                    <div class="detail-value">${escapeHtml(record.competitionPeriod || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Held At</div>
+                    <div class="detail-value">${escapeHtml(record.competitionHeldAt || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">District</div>
+                    <div class="detail-value">${escapeHtml(record.district || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Representing District</div>
+                    <div class="detail-value">${escapeHtml(record.representingDistrict || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Valid for Employment Group</div>
+                    <div class="detail-value">${escapeHtml(record.validForEmploymentGroup || 'N/A')}</div>
+                </div>
+                <div class="detail-row">
+                    <div class="detail-label">Certificate Number</div>
+                    <div class="detail-value">${escapeHtml(record.certificateNo || 'N/A')}</div>
+                </div>
+            `;
+
+            document.getElementById('certificateModal').style.display = 'block';
+        }
+
+        // Request certificate for a competition record
+        async function requestCertificate(recordId) {
+            if (!confirm('Are you sure you want to request a certificate for this competition record?')) {
+                return;
+            }
+
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Submitting certificate request...', 'info');
+
+                const response = await fetch(`${API_BASE}/athletes/request-certificate/${recordId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to request certificate');
+                }
+
+                showMessage('Certificate request submitted successfully! The admin will review and approve your request.', 'success');
+
+                // Reload records to show updated status
+                setTimeout(() => {
+                    loadCertificates();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error requesting certificate:', error);
+                showMessage(error.message || 'Failed to request certificate', 'error');
+            }
+        }
+
+        // Show issued certificates (original functionality)
+        async function showIssuedCertificates() {
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Loading issued certificates...', 'info');
+
+                const response = await fetch(`${API_BASE}/athletes/certificates`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to load certificates');
+                }
+
+                const certificates = result.certificates || [];
+
+                // Show modal with issued certificates
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="issuedCertsOverlay" onclick="if(event.target.id==='issuedCertsOverlay')this.remove()">
+                        <div style="background:white;border-radius:20px;padding:30px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">Issued Certificates (${certificates.length})</h2>
+                                <button onclick="document.getElementById('issuedCertsOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+                `;
+
+                if (certificates.length === 0) {
+                    modalHTML += `
+                        <div style="text-align:center;padding:40px;color:#666;">
+                            <div style="font-size:48px;margin-bottom:15px;">📜</div>
+                            <h3>No Issued Certificates</h3>
+                            <p>You don't have any issued certificates yet.</p>
+                        </div>
+                    `;
+                } else {
+                    certificates.forEach(cert => {
+                        modalHTML += `
+                            <div style="border:2px solid #e0e0e0;border-radius:12px;padding:20px;margin-bottom:15px;background:#fafafa;">
+                                <h3 style="margin-bottom:15px;color:#333;">${escapeHtml(cert.subjectName || 'Certificate')}</h3>
+                                <div style="margin-bottom:10px;"><strong>Type:</strong> ${escapeHtml(cert.certificateType || 'N/A')}</div>
+                                <div style="margin-bottom:10px;"><strong>Issued:</strong> ${formatDate(cert.issuedDate)}</div>
+                                <div style="margin-bottom:10px;"><strong>Issuer:</strong> ${escapeHtml(cert.issuerName || 'N/A')}</div>
+                                <div style="margin-top:15px;display:flex;gap:10px;">
+                                    <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;">Download</button>
+                                    <button onclick="window.open('/api/certificates/verify/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">Validate</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+
+                modalHTML += `</div></div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            } catch (error) {
+                console.error('Error loading issued certificates:', error);
+                showMessage(error.message || 'Failed to load issued certificates', 'error');
+            }
+        }
+
+        // Show certificate requests status
+        async function showCertificateRequests() {
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Loading certificate requests...', 'info');
+
+                const response = await fetch(`${API_BASE}/athletes/my-requests`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to load requests');
+                }
+
+                const requests = result.requests || [];
+
+                // Show modal with requests
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="requestsOverlay" onclick="if(event.target.id==='requestsOverlay')this.remove()">
+                        <div style="background:white;border-radius:20px;padding:30px;max-width:1000px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">My Certificate Requests (${requests.length})</h2>
+                                <button onclick="document.getElementById('requestsOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+                `;
+
+                if (requests.length === 0) {
+                    modalHTML += `
+                        <div style="text-align:center;padding:40px;color:#666;">
+                            <div style="font-size:48px;margin-bottom:15px;">📋</div>
+                            <h3>No Requests</h3>
+                            <p>You haven't requested any certificates yet.</p>
+                        </div>
+                    `;
+                } else {
+                    requests.forEach(req => {
+                        const statusColors = {
+                            pending: { bg: '#fff3cd', color: '#856404' },
+                            approved: { bg: '#d1e7dd', color: '#0f5132' },
+                            rejected: { bg: '#f8d7da', color: '#842029' }
+                        };
+                        const statusColor = statusColors[req.status] || statusColors.pending;
+
+                        // Calculate days since request for appeal eligibility
+                        const requestDate = new Date(req.requestedAt);
+                        const currentDate = new Date();
+                        const daysSinceRequest = Math.floor((currentDate - requestDate) / (1000 * 60 * 60 * 24));
+                        const canAppeal = req.status === 'pending' && daysSinceRequest >= 15 && !req.hasAppeal;
+
+                        modalHTML += `
+                            <div style="border:2px solid #e0e0e0;border-radius:12px;padding:20px;margin-bottom:15px;background:#fafafa;">
+                                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px;flex-wrap:wrap;gap:10px;">
+                                    <h3 style="margin:0;color:#333;">${escapeHtml(req.gameName || req.competitionName || 'Competition Record')}</h3>
+                                    <span style="background:${statusColor.bg};color:${statusColor.color};padding:6px 12px;border-radius:20px;font-size:0.85em;font-weight:600;">${req.status.toUpperCase()}</span>
+                                </div>
+                                <div style="margin-bottom:8px;"><strong>Competition:</strong> ${escapeHtml(req.competitionName || 'N/A')}</div>
+                                <div style="margin-bottom:8px;"><strong>Level:</strong> ${escapeHtml(req.competitionLevel || 'N/A')}</div>
+                                <div style="margin-bottom:8px;"><strong>Requested:</strong> ${formatDate(req.requestedAt)} <span style="color:#666;font-size:0.9em;">(${daysSinceRequest} days ago)</span></div>
+                                ${req.processedAt ? `<div style="margin-bottom:8px;"><strong>Processed:</strong> ${formatDate(req.processedAt)}</div>` : ''}
+                                ${req.rejectionReason ? `<div style="margin-top:15px;padding:15px;background:#f8d7da;border-radius:8px;"><strong>Rejection Reason:</strong> ${escapeHtml(req.rejectionReason)}</div>` : ''}
+                                ${req.adminNotes ? `<div style="margin-top:15px;padding:15px;background:#e7f3ff;border-radius:8px;"><strong>Admin Notes:</strong> ${escapeHtml(req.adminNotes)}</div>` : ''}
+                                ${req.status === 'approved' && req.certificateHash ? `
+                                    <div style="margin-top:15px;display:flex;gap:10px;">
+                                        <button onclick="window.open('/api/certificates/download/${req.certificateHash}', '_blank')" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;">Download Certificate</button>
+                                    </div>
+                                ` : ''}
+                                ${canAppeal ? `
+                                    <div style="margin-top:15px;padding:15px;background:#fff3cd;border-left:4px solid #ffc107;border-radius:8px;">
+                                        <strong style="color:#856404;">Request Pending for ${daysSinceRequest} days</strong>
+                                        <p style="margin:8px 0;color:#666;font-size:0.9em;">You can now raise an appeal to expedite this request.</p>
+                                        <button onclick="document.getElementById('requestsOverlay').remove();raiseAppeal('${req.id}', '${escapeHtml(req.competitionName || 'Competition')}')" style="padding:8px 16px;background:#ff6b6b;color:white;border:none;border-radius:6px;cursor:pointer;margin-top:8px;">Raise Appeal</button>
+                                    </div>
+                                ` : ''}
+                                ${req.status === 'pending' && daysSinceRequest < 15 ? `
+                                    <div style="margin-top:15px;padding:12px;background:#e7f3ff;border-radius:8px;font-size:0.9em;color:#666;">
+                                        You can raise an appeal after 15 days if this request remains pending. (${15 - daysSinceRequest} days remaining)
+                                    </div>
+                                ` : ''}
+                                ${req.hasAppeal ? `
+                                    <div style="margin-top:15px;padding:12px;background:#f8d7da;border-radius:8px;font-size:0.9em;color:#721c24;">
+                                        An appeal has already been raised for this request. Check "My Appeals" for status.
+                                    </div>
+                                ` : ''}
+                            </div>
+                        `;
+                    });
+                }
+
+                modalHTML += `</div></div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            } catch (error) {
+                console.error('Error loading requests:', error);
+                showMessage(error.message || 'Failed to load certificate requests', 'error');
+            }
+        }
+
+        // Download issued certificate (placeholder)
+        function downloadIssuedCertificate(recordId) {
+            showMessage('Downloading certificate...', 'info');
+            // This would need to fetch the certificate hash associated with this record
+            // For now, just show a message
+            showMessage('Certificate download feature - Implementation pending', 'info');
+        }
+
+        // APPEAL FUNCTIONS
+
+        // Raise an appeal for a pending request
+        async function raiseAppeal(requestId, competitionName) {
+            const reason = prompt(`Raise Appeal for: ${competitionName}\n\nPlease provide a reason for your appeal:`);
+
+            if (!reason || reason.trim().length === 0) {
+                showMessage('Appeal reason is required', 'error');
+                return;
+            }
+
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Submitting appeal...', 'info');
+
+                const response = await fetch(`${API_BASE}/athletes/create-appeal/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ reason: reason.trim() })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to create appeal');
+                }
+
+                showMessage('Appeal submitted successfully! The admin will review your appeal.', 'success');
+
+                // Reload requests after a short delay
+                setTimeout(() => {
+                    showCertificateRequests();
+                }, 1500);
+
+            } catch (error) {
+                console.error('Error creating appeal:', error);
+                showMessage(error.message || 'Failed to create appeal', 'error');
+            }
+        }
+
+        // Show all appeals
+        async function showAppeals() {
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Loading appeals...', 'info');
+
+                const response = await fetch(`${API_BASE}/athletes/my-appeals`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || 'Failed to load appeals');
+                }
+
+                const appeals = result.appeals || [];
+
+                // Show modal with appeals
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="appealsOverlay" onclick="if(event.target.id==='appealsOverlay')this.remove()">
+                        <div style="background:white;border-radius:20px;padding:30px;max-width:1000px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">My Appeals (${appeals.length})</h2>
+                                <button onclick="document.getElementById('appealsOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+                `;
+
+                if (appeals.length === 0) {
+                    modalHTML += `
+                        <div style="text-align:center;padding:40px;color:#666;">
+                            <div style="font-size:48px;margin-bottom:15px;">⚖️</div>
+                            <h3>No Appeals</h3>
+                            <p>You haven't raised any appeals yet.</p>
+                            <p style="margin-top:15px;font-size:0.9em;">You can raise an appeal for pending certificate requests that are older than 15 days.</p>
+                        </div>
+                    `;
+                } else {
+                    appeals.forEach(appeal => {
+                        const statusColors = {
+                            pending: { bg: '#fff3cd', color: '#856404' },
+                            accepted: { bg: '#d1e7dd', color: '#0f5132' },
+                            rejected: { bg: '#f8d7da', color: '#842029' }
+                        };
+                        const statusColor = statusColors[appeal.status] || statusColors.pending;
+
+                        // Calculate days since appeal
+                        const appealDate = new Date(appeal.createdAt);
+                        const currentDate = new Date();
+                        const daysSinceAppeal = Math.floor((currentDate - appealDate) / (1000 * 60 * 60 * 24));
+
+                        modalHTML += `
+                            <div style="border:2px solid #e0e0e0;border-radius:12px;padding:20px;margin-bottom:15px;background:#fafafa;">
+                                <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:15px;flex-wrap:wrap;gap:10px;">
+                                    <h3 style="margin:0;color:#333;">${escapeHtml(appeal.competitionName || appeal.gameName || 'Competition Record')}</h3>
+                                    <span style="background:${statusColor.bg};color:${statusColor.color};padding:6px 12px;border-radius:20px;font-size:0.85em;font-weight:600;">${appeal.status.toUpperCase()}</span>
+                                </div>
+                                <div style="margin-bottom:10px;"><strong>Game/Sport:</strong> ${escapeHtml(appeal.gameName || 'N/A')}</div>
+                                <div style="margin-bottom:10px;"><strong>Competition Level:</strong> ${escapeHtml(appeal.competitionLevel || 'N/A')}</div>
+                                <div style="margin-bottom:10px;"><strong>Appeal Created:</strong> ${formatDate(appeal.createdAt)} <span style="color:#666;font-size:0.9em;">(${daysSinceAppeal} days ago)</span></div>
+                                ${appeal.resolvedAt ? `<div style="margin-bottom:10px;"><strong>Resolved:</strong> ${formatDate(appeal.resolvedAt)}</div>` : ''}
+                                <div style="margin-top:15px;padding:15px;background:#e7f3ff;border-left:4px solid #004085;border-radius:8px;">
+                                    <strong style="color:#004085;">Your Appeal Reason:</strong>
+                                    <p style="margin:8px 0 0 0;color:#333;">${escapeHtml(appeal.reason)}</p>
+                                </div>
+                                ${appeal.adminResponse ? `
+                                    <div style="margin-top:15px;padding:15px;background:${appeal.status === 'accepted' ? '#d1e7dd' : '#f8d7da'};border-left:4px solid ${appeal.status === 'accepted' ? '#0f5132' : '#842029'};border-radius:8px;">
+                                        <strong style="color:${appeal.status === 'accepted' ? '#0f5132' : '#842029'};">Admin Response:</strong>
+                                        <p style="margin:8px 0 0 0;color:#333;">${escapeHtml(appeal.adminResponse)}</p>
+                                    </div>
+                                ` : `
+                                    <div style="margin-top:15px;padding:12px;background:#fff3cd;border-radius:8px;font-size:0.9em;color:#856404;">
+                                        Your appeal is pending admin review. You will be notified once it's processed.
+                                    </div>
+                                `}
+                            </div>
+                        `;
+                    });
+                }
+
+                modalHTML += `</div></div>`;
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+            } catch (error) {
+                console.error('Error loading appeals:', error);
+                showMessage(error.message || 'Failed to load appeals', 'error');
+            }
+        }
     </script>
 </body>
 </html>

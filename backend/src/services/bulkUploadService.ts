@@ -114,7 +114,11 @@ class BulkUploadService {
         raw: false // Ensure dates are converted to strings
       });
 
-      logger.info(`Processing ${data.length} rows from Excel file`);
+      logger.info(`Processing ${data.length} rows from Excel file - storing in database only`);
+
+      // Import query function
+      const { query } = await import('../config/database-sqlite');
+      const { v4: uuidv4 } = await import('uuid');
 
       // Process each row
       for (let i = 0; i < data.length; i++) {
@@ -135,85 +139,52 @@ class BulkUploadService {
             continue;
           }
 
-          // Generate certificate data
-          const certificateData = {
-            issuerDid: issuerData.issuerDid,
-            issuerName: issuerData.issuerName,
-            subjectName: extractedData.name,
-            subjectEmail: extractedData.email,
-            certificateType: issuerData.certificateType,
-            expiryDate: issuerData.expiryDate,
-            metadata: {
-              fatherName: extractedData.fatherName,
-              dob: extractedData.dob,
-              district: extractedData.district,
-              gameName: extractedData.gameName,
-              competitionPeriod: extractedData.competitionPeriod,
-              competitionName: extractedData.competitionName,
-              competitionHeldAt: extractedData.competitionHeldAt,
-              competitionLevel: extractedData.competitionLevel,
-              certificateNo: extractedData.certificateNo || `CERT-${Date.now()}-${i}`,
-              representingDistrict: extractedData.representingDistrict,
-              divisionStateCountry: extractedData.divisionStateCountry,
-              positionObtained: extractedData.positionObtained,
-              validForEmploymentGroup: extractedData.validForEmploymentGroup,
-              applicableGovtResolutions: extractedData.applicableGovtResolutions
-            }
-          };
+          // Insert into athlete_competitions table (NOT generating certificate)
+          const recordId = uuidv4();
+          const certificateNo = extractedData.certificateNo || `CERT-${Date.now()}-${i}`;
 
-          // Issue certificate
-          const certificate = await certificateService.issueCertificate(certificateData);
-
-          // Get certificate with digital signature from database
-          const dbResult = await certificateService.validateCertificate(certificate.certHash);
-          const digitalSignature = dbResult.certificate?.digitalSignature || null;
-
-          // Generate PDF
-          const pdfData = {
-            ...extractedData,
-            certHash: certificate.certHash,
-            issuerName: issuerData.issuerName,
-            issuerTitle: 'Deputy Director',
-            organizationName: 'Sports and Youth Services, Maharashtra State',
-            issueDate: new Date().toLocaleDateString('en-IN'),
-            digitalSignature
-          };
-
-          const pdfBuffer = await pdfService.generateCertificatePDF(pdfData);
-
-          // Send email if email address is provided
-          let emailSent = false;
-          if (extractedData.email && this.isValidEmail(extractedData.email)) {
-            try {
-              emailSent = await emailService.sendCertificateEmail(
-                extractedData.email,
-                extractedData.name,
-                certificate.certHash,
-                pdfBuffer,
-                issuerData.certificateType
-              );
-
-              if (emailSent) {
-                emailsSent++;
-              } else {
-                emailsFailed++;
-              }
-            } catch (emailError) {
-              logger.error(`Failed to send email to ${extractedData.email}:`, emailError);
-              emailsFailed++;
-            }
-          }
+          await query(`
+            INSERT INTO athlete_competitions (
+              id, unique_id, aadhar_number, full_name, father_name, dob, district,
+              representing_district, division_state_country, game_name, competition_name,
+              competition_type, competition_period, competition_held_at, competition_level,
+              position_obtained, certificate_no, valid_for_employment_group,
+              applicable_govt_resolutions, certificate_issued, certificate_requested
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `, [
+            recordId,
+            null, // unique_id will be filled when athlete registers
+            null, // aadhar_number will be filled when athlete registers
+            extractedData.name,
+            extractedData.fatherName,
+            extractedData.dob,
+            extractedData.district,
+            extractedData.representingDistrict,
+            extractedData.divisionStateCountry,
+            extractedData.gameName,
+            extractedData.competitionName,
+            issuerData.certificateType,
+            extractedData.competitionPeriod,
+            extractedData.competitionHeldAt,
+            extractedData.competitionLevel,
+            extractedData.positionObtained,
+            certificateNo,
+            extractedData.validForEmploymentGroup,
+            extractedData.applicableGovtResolutions,
+            0, // certificate_issued = false
+            0  // certificate_requested = false
+          ]);
 
           successful++;
           results.push({
             row: rowNumber,
             name: extractedData.name,
             success: true,
-            certificateHash: certificate.certHash,
-            emailSent
+            certificateHash: undefined, // No certificate generated yet
+            emailSent: false
           });
 
-          logger.info(`Successfully processed certificate for ${extractedData.name} (Row ${rowNumber})`);
+          logger.info(`Successfully stored data for ${extractedData.name} (Row ${rowNumber}) - Certificate will be generated on request`);
         } catch (error) {
           failed++;
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -238,8 +209,8 @@ class BulkUploadService {
         totalProcessed: data.length,
         successful,
         failed,
-        emailsSent,
-        emailsFailed,
+        emailsSent: 0, // No emails sent during bulk upload
+        emailsFailed: 0,
         results
       };
     } catch (error) {

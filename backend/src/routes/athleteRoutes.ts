@@ -45,6 +45,27 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
     [athleteId, fullName, email, phoneNumber, dob, passwordHash, district, state]
   );
 
+  // Auto-map existing competition records to this athlete
+  try {
+    // Find and link records based on name, DOB, and phone
+    const mappingResult = await query(`
+      UPDATE athlete_competitions
+      SET athlete_id = ?
+      WHERE athlete_id IS NULL
+        AND (
+          full_name = ?
+          OR (full_name LIKE ? AND (dob = ? OR dob IS NULL))
+          OR (full_name = ? AND dob = ?)
+        )
+    `, [athleteId, fullName, `%${fullName}%`, dob, fullName, dob]);
+
+    const recordsMapped = mappingResult.rowCount || 0;
+    logger.info(`Auto-mapped ${recordsMapped} competition records to athlete ${athleteId}`);
+  } catch (mappingError) {
+    logger.error('Error auto-mapping competition records:', mappingError);
+    // Don't fail registration if mapping fails
+  }
+
   // Generate token
   const token = jwt.sign(
     { id: athleteId, email, type: 'athlete' },
@@ -326,6 +347,296 @@ router.get('/search', authenticate, asyncHandler(async (req: Request, res: Respo
     success: true,
     athletes,
     count: athletes.length
+  });
+}));
+
+// Get athlete's competition records (from bulk upload)
+router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  // Get athlete info
+  const athleteResult = await query('SELECT * FROM athletes WHERE id = ?', [user.id]);
+  if (athleteResult.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Athlete not found' });
+  }
+
+  const athlete = athleteResult.rows[0];
+
+  // Get all competition records that match this athlete (by name, DOB, phone, or linked athlete_id)
+  const result = await query(`
+    SELECT * FROM athlete_competitions
+    WHERE athlete_id = ?
+       OR (full_name = ? AND (dob = ? OR dob IS NULL))
+       OR (aadhar_number = ? AND aadhar_number IS NOT NULL)
+    ORDER BY created_at DESC
+  `, [user.id, athlete.full_name, athlete.dob, athlete.aadhar_number]);
+
+  const records = result.rows.map((row: any) => ({
+    id: row.id,
+    fullName: row.full_name,
+    fatherName: row.father_name,
+    dob: row.dob,
+    district: row.district,
+    representingDistrict: row.representing_district,
+    divisionStateCountry: row.division_state_country,
+    gameName: row.game_name,
+    competitionName: row.competition_name,
+    competitionType: row.competition_type,
+    competitionPeriod: row.competition_period,
+    competitionHeldAt: row.competition_held_at,
+    competitionLevel: row.competition_level,
+    positionObtained: row.position_obtained,
+    certificateNo: row.certificate_no,
+    validForEmploymentGroup: row.valid_for_employment_group,
+    applicableGovtResolutions: row.applicable_govt_resolutions,
+    certificateIssued: row.certificate_issued,
+    certificateRequested: row.certificate_requested,
+    createdAt: row.created_at
+  }));
+
+  res.json({
+    success: true,
+    records,
+    count: records.length
+  });
+}));
+
+// Request certificate for a competition record
+router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { recordId } = req.params;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  // Check if record exists
+  const recordResult = await query('SELECT * FROM athlete_competitions WHERE id = ?', [recordId]);
+  if (recordResult.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Record not found' });
+  }
+
+  const record = recordResult.rows[0];
+
+  // Check if certificate already issued
+  if (record.certificate_issued) {
+    return res.status(400).json({ success: false, message: 'Certificate already issued for this record' });
+  }
+
+  // Check if request already exists
+  const existingRequest = await query(
+    'SELECT * FROM quota_certificate_requests WHERE athlete_id = ? AND competition_record_id = ? AND status IN (?, ?)',
+    [user.id, recordId, 'pending', 'approved']
+  );
+
+  if (existingRequest.rows.length > 0) {
+    return res.status(400).json({ success: false, message: 'Request already exists for this record' });
+  }
+
+  // Create certificate request
+  const { v4: uuidv4 } = await import('uuid');
+  const requestId = uuidv4();
+
+  await query(`
+    INSERT INTO quota_certificate_requests (
+      id, athlete_id, competition_record_id, status, requested_at
+    ) VALUES (?, ?, ?, ?, datetime('now'))
+  `, [requestId, user.id, recordId, 'pending']);
+
+  // Update competition record
+  await query(
+    'UPDATE athlete_competitions SET certificate_requested = 1 WHERE id = ?',
+    [recordId]
+  );
+
+  res.json({
+    success: true,
+    message: 'Certificate request submitted successfully',
+    requestId
+  });
+}));
+
+// Get athlete's certificate requests
+router.get('/my-requests', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  const result = await query(`
+    SELECT qcr.*, ac.full_name, ac.game_name, ac.competition_name, ac.competition_level,
+           (SELECT COUNT(*) FROM appeals WHERE request_id = qcr.id) as appeal_count
+    FROM quota_certificate_requests qcr
+    LEFT JOIN athlete_competitions ac ON qcr.competition_record_id = ac.id
+    WHERE qcr.athlete_id = ?
+    ORDER BY qcr.requested_at DESC
+  `, [user.id]);
+
+  const requests = result.rows.map((row: any) => ({
+    id: row.id,
+    competitionRecordId: row.competition_record_id,
+    status: row.status,
+    certificateHash: row.certificate_hash,
+    adminNotes: row.admin_notes,
+    rejectionReason: row.rejection_reason,
+    requestedAt: row.requested_at,
+    processedAt: row.processed_at,
+    processedBy: row.processed_by,
+    // Competition info
+    fullName: row.full_name,
+    gameName: row.game_name,
+    competitionName: row.competition_name,
+    competitionLevel: row.competition_level,
+    // Appeal info
+    hasAppeal: row.appeal_count > 0
+  }));
+
+  res.json({
+    success: true,
+    requests,
+    count: requests.length
+  });
+}));
+
+// Create an appeal for a pending request (after 15 days)
+router.post('/create-appeal/:requestId', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { requestId } = req.params;
+  const { reason } = req.body;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  if (!reason || reason.trim().length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Appeal reason is required'
+    });
+  }
+
+  // Check if request exists and belongs to this athlete
+  const requestResult = await query(
+    'SELECT * FROM quota_certificate_requests WHERE id = ? AND athlete_id = ?',
+    [requestId, user.id]
+  );
+
+  if (requestResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Request not found'
+    });
+  }
+
+  const request = requestResult.rows[0];
+
+  // Check if request is still pending
+  if (request.status !== 'pending') {
+    return res.status(400).json({
+      success: false,
+      message: 'Appeals can only be created for pending requests'
+    });
+  }
+
+  // Check if request is at least 15 days old
+  const requestDate = new Date(request.requested_at);
+  const currentDate = new Date();
+  const daysDifference = Math.floor((currentDate.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (daysDifference < 15) {
+    return res.status(400).json({
+      success: false,
+      message: `You can only appeal after 15 days. This request is ${daysDifference} days old.`,
+      daysRemaining: 15 - daysDifference
+    });
+  }
+
+  // Check if appeal already exists for this request
+  const existingAppeal = await query(
+    'SELECT * FROM appeals WHERE request_id = ?',
+    [requestId]
+  );
+
+  if (existingAppeal.rows.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'An appeal already exists for this request'
+    });
+  }
+
+  // Create appeal
+  const appealId = uuidv4();
+  await query(`
+    INSERT INTO appeals (
+      id, request_id, athlete_id, reason, status, created_at
+    ) VALUES (?, ?, ?, ?, 'pending', datetime('now'))
+  `, [appealId, requestId, user.id, reason]);
+
+  logger.info(`Appeal created: ${appealId} for request ${requestId} by athlete ${user.id}`);
+
+  res.status(201).json({
+    success: true,
+    message: 'Appeal submitted successfully',
+    appealId
+  });
+}));
+
+// Get athlete's appeals
+router.get('/my-appeals', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  const result = await query(`
+    SELECT a.*, qcr.competition_record_id, ac.competition_name, ac.game_name, ac.competition_level
+    FROM appeals a
+    INNER JOIN quota_certificate_requests qcr ON a.request_id = qcr.id
+    LEFT JOIN athlete_competitions ac ON qcr.competition_record_id = ac.id
+    WHERE a.athlete_id = ?
+    ORDER BY a.created_at DESC
+  `, [user.id]);
+
+  const appeals = result.rows.map((row: any) => ({
+    id: row.id,
+    requestId: row.request_id,
+    reason: row.reason,
+    status: row.status,
+    adminResponse: row.admin_response,
+    createdAt: row.created_at,
+    resolvedAt: row.resolved_at,
+    resolvedBy: row.resolved_by,
+    // Competition info
+    competitionName: row.competition_name,
+    gameName: row.game_name,
+    competitionLevel: row.competition_level
+  }));
+
+  res.json({
+    success: true,
+    appeals,
+    count: appeals.length
   });
 }));
 

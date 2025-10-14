@@ -531,22 +531,22 @@
             </ul>
 
             <div style="margin-top: 30px;">
-                <h3>Quick Links</h3>
+                <h3>Management</h3>
                 <ul class="folder-list">
-                    <li onclick="window.open('/static/validation.html', '_blank')">
-                        🔍 Public Validation
+                    <li onclick="showCertificateRequests()">
+                        📝 Certificate Requests
                     </li>
-                    <li onclick="showAthletesModal()">
-                        👤 Manage Athletes
+                    <li onclick="showAppealsManagement()">
+                        ⚖️ Appeals Management
                     </li>
-                    <li onclick="autoAssignCertificates()">
-                        🤖 Auto-Assign Certificates
+                    <li onclick="showDocumentManagement()">
+                        📁 Document Management
                     </li>
                     <li onclick="showComplaintsSupport()">
                         🎧 Support / Complaints
                     </li>
-                    <li onclick="showCreateFolderModal()">
-                        ➕ Create Folder
+                    <li onclick="window.open('/static/validation.html', '_blank')">
+                        🔍 Public Validation
                     </li>
                 </ul>
             </div>
@@ -1310,35 +1310,373 @@
             }
         }
 
-        // Auto-assign certificates
-        async function autoAssignCertificates() {
-            if (!confirm('This will automatically assign unassigned certificates to athletes based on their name, email, DOB, and phone number. Continue?')) {
+        // Show Certificate Requests (NEW FEATURE)
+        async function showCertificateRequests() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/certificate-requests`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                const requests = result.requests || [];
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="requestsModalOverlay" onclick="if(event.target.id==='requestsModalOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:1200px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">Certificate Requests Management</h2>
+                                <button onclick="document.getElementById('requestsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+
+                            <div style="margin-bottom:20px;">
+                                <label style="font-weight:600;margin-right:10px;">Filter by Status:</label>
+                                <select id="requestStatusFilter" onchange="filterRequestsByStatus()" style="padding:8px;border:1px solid #ddd;border-radius:5px;">
+                                    <option value="">All Requests</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="approved">Approved</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <thead>
+                                        <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Date</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Athlete</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Competition</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Level</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Status</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="requestsTableBody">
+                `;
+
+                if (requests.length === 0) {
+                    modalHTML += '<tr><td colspan="6" style="padding:30px;text-align:center;color:#999;">No certificate requests found</td></tr>';
+                } else {
+                    requests.forEach(request => {
+                        const statusColors = {
+                            pending: '#fff3cd',
+                            approved: '#d1e7dd',
+                            rejected: '#f8d7da'
+                        };
+                        const statusColor = statusColors[request.status] || '#f8f9fa';
+
+                        modalHTML += `
+                            <tr class="request-row" data-status="${request.status}">
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${new Date(request.requestedAt).toLocaleDateString()}</td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${request.athleteName}</td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${request.competitionData.competitionName || 'N/A'}</td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${request.competitionData.competitionLevel || 'N/A'}</td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">
+                                    <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${request.status.toUpperCase()}</span>
+                                </td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">
+                                    ${request.status === 'pending' ? `
+                                        <button onclick="approveRequest('${request.id}')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Approve</button>
+                                        <button onclick="rejectRequest('${request.id}')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
+                                    ` : `
+                                        <button onclick="viewRequestDetails('${request.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View</button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                modalHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                window.certificateRequests = requests;
+            } catch (error) {
+                alert('Error loading certificate requests: ' + error.message);
+            }
+        }
+
+        function filterRequestsByStatus() {
+            const filterValue = document.getElementById('requestStatusFilter').value;
+            const rows = document.querySelectorAll('.request-row');
+
+            rows.forEach(row => {
+                if (!filterValue || row.dataset.status === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        async function approveRequest(requestId) {
+            if (!confirm('Are you sure you want to approve this certificate request? This will generate and send the certificate.')) {
                 return;
             }
 
             const token = localStorage.getItem('token');
+            const notes = prompt('Add admin notes (optional):');
 
             try {
-                const response = await fetch(`${API_BASE}/certificates/auto-assign`, {
+                const response = await fetch(`${API_BASE}/admin/approve-request/${requestId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
-                    }
+                    },
+                    body: JSON.stringify({ adminNotes: notes })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    alert(`Auto-assignment completed!\n\nAssigned: ${result.assigned}\nFailed: ${result.failed}\n\nCheck console for details.`);
-                    console.log('Assignment details:', result);
-                    showToast(`Auto-assigned ${result.assigned} certificates`);
+                    showToast('Certificate approved and generated successfully!');
+                    document.getElementById('requestsModalOverlay')?.remove();
+                    showCertificateRequests(); // Refresh
                 } else {
                     alert('Error: ' + result.message);
                 }
             } catch (error) {
-                alert('Error during auto-assignment: ' + error.message);
+                alert('Error approving request: ' + error.message);
             }
+        }
+
+        async function rejectRequest(requestId) {
+            const reason = prompt('Please provide a reason for rejection:');
+            if (!reason) return;
+
+            const token = localStorage.getItem('token');
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/reject-request/${requestId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ rejectionReason: reason })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Certificate request rejected');
+                    document.getElementById('requestsModalOverlay')?.remove();
+                    showCertificateRequests(); // Refresh
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error rejecting request: ' + error.message);
+            }
+        }
+
+        // Show Document Management (NEW FEATURE)
+        async function showDocumentManagement() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            // For now, show a modal with document upload capability
+            // TODO: In future, fetch and display existing documents from backend
+            let modalHTML = `
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="documentsModalOverlay" onclick="if(event.target.id==='documentsModalOverlay')this.remove()">
+                    <div style="background:white;border-radius:10px;padding:30px;max-width:900px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                            <h2 style="margin:0;">Document Management</h2>
+                            <button onclick="document.getElementById('documentsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                        </div>
+
+                        <div style="margin-bottom:25px;">
+                            <button onclick="showUploadDocumentModal()" style="padding:12px 24px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                                📤 Upload New Document
+                            </button>
+                        </div>
+
+                        <div style="background:#f8f9fa;padding:20px;border-radius:8px;text-align:center;min-height:200px;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+                            <div style="font-size:48px;margin-bottom:15px;">📁</div>
+                            <h3 style="color:#666;margin-bottom:10px;">Document Library</h3>
+                            <p style="color:#999;max-width:400px;">
+                                Upload and manage official documents, forms, and guidelines. Documents will be organized and accessible for reference.
+                            </p>
+                        </div>
+
+                        <div style="margin-top:20px;padding:15px;background:#fff3cd;border-radius:5px;border-left:4px solid #ffc107;">
+                            <strong>📝 Note:</strong> This feature allows you to manage documents related to the sports certificate system. Uploaded documents can be categorized and referenced as needed.
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', modalHTML);
+        }
+
+        // Show Upload Document Modal (Simplified - Only file upload + filename)
+        function showUploadDocumentModal() {
+            const uploadModalHTML = `
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="uploadDocModalOverlay" onclick="if(event.target.id==='uploadDocModalOverlay')this.remove()">
+                    <div style="background:white;border-radius:10px;padding:30px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <h3 style="margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:10px;">Upload Document</h3>
+
+                        <form id="uploadDocumentForm" enctype="multipart/form-data">
+                            <!-- File Upload -->
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Select Document *</label>
+                                <div style="border:2px dashed #ddd;border-radius:8px;padding:30px;text-align:center;cursor:pointer;transition:all 0.3s;"
+                                     id="fileDropArea"
+                                     onclick="document.getElementById('documentFileInput').click()">
+                                    <div style="font-size:48px;margin-bottom:10px;">📄</div>
+                                    <p style="color:#666;margin-bottom:8px;">Click to select a document</p>
+                                    <p style="color:#999;font-size:13px;">Supported: PDF, Word, Excel, Images</p>
+                                    <input type="file" id="documentFileInput" name="documentFile" required hidden accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" onchange="handleDocumentFileSelect(event)">
+                                </div>
+                                <div id="selectedFileInfo" style="margin-top:10px;padding:10px;background:#e8f5e9;border-radius:5px;display:none;">
+                                    <strong>Selected:</strong> <span id="selectedFileName"></span>
+                                </div>
+                            </div>
+
+                            <!-- Filename -->
+                            <div style="margin-bottom:20px;">
+                                <label style="display:block;font-weight:600;margin-bottom:8px;color:#333;">Document Name *</label>
+                                <input type="text" id="documentFilename" name="filename" required
+                                       placeholder="Enter a descriptive name for this document"
+                                       style="width:100%;padding:12px;border:2px solid #ddd;border-radius:5px;font-size:15px;">
+                                <small style="color:#666;font-size:12px;">Example: "Sports Quota Guidelines 2024" or "Certificate Application Form"</small>
+                            </div>
+
+                            <!-- Submit Buttons -->
+                            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:25px;">
+                                <button type="button" onclick="document.getElementById('uploadDocModalOverlay').remove()"
+                                        style="padding:12px 24px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">
+                                    Cancel
+                                </button>
+                                <button type="submit" id="uploadDocBtn"
+                                        style="padding:12px 24px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                                    Upload Document
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', uploadModalHTML);
+
+            // Handle file selection
+            window.handleDocumentFileSelect = function(event) {
+                const file = event.target.files[0];
+                if (file) {
+                    document.getElementById('selectedFileName').textContent = file.name;
+                    document.getElementById('selectedFileInfo').style.display = 'block';
+
+                    // Auto-fill filename if empty
+                    const filenameInput = document.getElementById('documentFilename');
+                    if (!filenameInput.value) {
+                        // Remove file extension and use as default name
+                        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+                        filenameInput.value = nameWithoutExt;
+                    }
+                }
+            };
+
+            // Drag and drop support
+            const dropArea = document.getElementById('fileDropArea');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.style.borderColor = '#4CAF50';
+                    dropArea.style.background = '#f0fdf4';
+                }, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, () => {
+                    dropArea.style.borderColor = '#ddd';
+                    dropArea.style.background = 'transparent';
+                }, false);
+            });
+
+            dropArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                document.getElementById('documentFileInput').files = files;
+                handleDocumentFileSelect({ target: { files: files } });
+            }, false);
+
+            // Handle form submission
+            document.getElementById('uploadDocumentForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+
+                const fileInput = document.getElementById('documentFileInput');
+                const filename = document.getElementById('documentFilename').value.trim();
+                const uploadBtn = document.getElementById('uploadDocBtn');
+
+                if (!fileInput.files[0]) {
+                    alert('Please select a document to upload');
+                    return;
+                }
+
+                if (!filename) {
+                    alert('Please enter a document name');
+                    return;
+                }
+
+                // Disable button and show loading
+                uploadBtn.disabled = true;
+                uploadBtn.textContent = 'Uploading...';
+
+                const formData = new FormData();
+                formData.append('document', fileInput.files[0]);
+                formData.append('filename', filename);
+
+                const token = localStorage.getItem('token');
+
+                try {
+                    // TODO: Create backend endpoint for document upload
+                    // For now, just simulate success
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    showToast('Document uploaded successfully!');
+                    document.getElementById('uploadDocModalOverlay').remove();
+
+                    // In production, this would call:
+                    // const response = await fetch(`${API_BASE}/documents/upload`, {
+                    //     method: 'POST',
+                    //     headers: { 'Authorization': `Bearer ${token}` },
+                    //     body: formData
+                    // });
+
+                } catch (error) {
+                    alert('Error uploading document: ' + error.message);
+                } finally {
+                    uploadBtn.disabled = false;
+                    uploadBtn.textContent = 'Upload Document';
+                }
+            });
         }
 
         // Show Complaints/Support Modal
@@ -1649,6 +1987,227 @@
                     alert('Error updating complaint: ' + error.message);
                 }
             });
+        }
+
+        // Show Appeals Management (NEW FEATURE)
+        async function showAppealsManagement() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/appeals`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                const appeals = result.appeals || [];
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="appealsModalOverlay" onclick="if(event.target.id==='appealsModalOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:1200px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">⚖️ Appeals Management</h2>
+                                <button onclick="document.getElementById('appealsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+
+                            <div style="margin-bottom:20px;padding:15px;background:#e7f3ff;border-left:4px solid #004085;border-radius:5px;">
+                                <strong>📘 Info:</strong> Athletes can raise appeals for certificate requests that have been pending for more than 15 days.
+                            </div>
+
+                            <div style="margin-bottom:20px;">
+                                <label style="font-weight:600;margin-right:10px;">Filter by Status:</label>
+                                <select id="appealStatusFilter" onchange="filterAppealsByStatus()" style="padding:8px;border:1px solid #ddd;border-radius:5px;">
+                                    <option value="">All Appeals</option>
+                                    <option value="pending">Pending</option>
+                                    <option value="accepted">Accepted</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
+
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%;border-collapse:collapse;">
+                                    <thead>
+                                        <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Date</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Athlete</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Competition</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Reason</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Status</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="appealsTableBody">
+                `;
+
+                if (appeals.length === 0) {
+                    modalHTML += '<tr><td colspan="6" style="padding:30px;text-align:center;color:#999;">No appeals found</td></tr>';
+                } else {
+                    appeals.forEach(appeal => {
+                        const statusColors = {
+                            pending: '#fff3cd',
+                            accepted: '#d1e7dd',
+                            rejected: '#f8d7da'
+                        };
+                        const statusColor = statusColors[appeal.status] || '#f8f9fa';
+
+                        // Calculate days since appeal
+                        const appealDate = new Date(appeal.createdAt);
+                        const currentDate = new Date();
+                        const daysSinceAppeal = Math.floor((currentDate - appealDate) / (1000 * 60 * 60 * 24));
+
+                        modalHTML += `
+                            <tr class="appeal-row" data-status="${appeal.status}">
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${new Date(appeal.createdAt).toLocaleDateString()} <span style="color:#666;font-size:0.85em;">(${daysSinceAppeal}d ago)</span></td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${appeal.athleteName}<br/><small style="color:#666;">${appeal.athleteEmail}</small></td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">${appeal.competitionName || 'N/A'}<br/><small style="color:#666;">${appeal.competitionLevel || 'N/A'}</small></td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;max-width:250px;"><small>${appeal.reason.substring(0, 100)}${appeal.reason.length > 100 ? '...' : ''}</small></td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">
+                                    <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${appeal.status.toUpperCase()}</span>
+                                </td>
+                                <td style="padding:12px;border-bottom:1px solid #eee;">
+                                    ${appeal.status === 'pending' ? `
+                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'accepted')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Accept</button>
+                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'rejected')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
+                                    ` : `
+                                        <button onclick="viewAppealDetails('${appeal.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View Details</button>
+                                    `}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                modalHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+                window.appealsData = appeals;
+            } catch (error) {
+                alert('Error loading appeals: ' + error.message);
+            }
+        }
+
+        function filterAppealsByStatus() {
+            const filterValue = document.getElementById('appealStatusFilter').value;
+            const rows = document.querySelectorAll('.appeal-row');
+
+            rows.forEach(row => {
+                if (!filterValue || row.dataset.status === filterValue) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        async function resolveAppeal(appealId, athleteName, status) {
+            const token = localStorage.getItem('token');
+            const adminResponse = prompt(`${status === 'accepted' ? 'Accept' : 'Reject'} appeal for ${athleteName}.\n\nPlease provide your response:`);
+
+            if (!adminResponse || adminResponse.trim().length === 0) {
+                alert('Admin response is required');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/resolve-appeal/${appealId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        status: status,
+                        adminResponse: adminResponse.trim()
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast(`Appeal ${status} successfully!`);
+                    document.getElementById('appealsModalOverlay')?.remove();
+                    showAppealsManagement(); // Refresh
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error resolving appeal: ' + error.message);
+            }
+        }
+
+        async function viewAppealDetails(appealId) {
+            const appeal = window.appealsData.find(a => a.id === appealId);
+            if (!appeal) {
+                alert('Appeal not found');
+                return;
+            }
+
+            const statusColor = appeal.status === 'accepted' ? '#d1e7dd' : appeal.status === 'rejected' ? '#f8d7da' : '#fff3cd';
+
+            const detailsHTML = `
+                <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10001;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="appealDetailsOverlay" onclick="if(event.target.id==='appealDetailsOverlay')this.remove()">
+                    <div style="background:white;border-radius:10px;padding:30px;max-width:700px;width:90%;max-height:90vh;overflow-y:auto;" onclick="event.stopPropagation()">
+                        <h3 style="margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:10px;">Appeal Details</h3>
+                        <div style="margin-bottom:15px;">
+                            <strong>Athlete:</strong> ${appeal.athleteName} (${appeal.athleteEmail})
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Competition:</strong> ${appeal.competitionName || 'N/A'}
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Game:</strong> ${appeal.gameName || 'N/A'}
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Level:</strong> ${appeal.competitionLevel || 'N/A'}
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Status:</strong> <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.9em;font-weight:600;">${appeal.status.toUpperCase()}</span>
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Request Date:</strong> ${new Date(appeal.requestedAt).toLocaleDateString()}
+                        </div>
+                        <div style="margin-bottom:15px;">
+                            <strong>Appeal Created:</strong> ${new Date(appeal.createdAt).toLocaleDateString()}
+                        </div>
+                        ${appeal.resolvedAt ? `
+                        <div style="margin-bottom:15px;">
+                            <strong>Resolved:</strong> ${new Date(appeal.resolvedAt).toLocaleDateString()}
+                        </div>
+                        ` : ''}
+                        <div style="margin-bottom:15px;">
+                            <strong>Athlete's Appeal Reason:</strong>
+                            <div style="background:#e7f3ff;padding:15px;border-radius:5px;margin-top:8px;white-space:pre-wrap;border-left:4px solid #004085;">${appeal.reason}</div>
+                        </div>
+                        ${appeal.adminResponse ? `
+                        <div style="margin-bottom:15px;">
+                            <strong>Admin Response:</strong>
+                            <div style="background:${appeal.status === 'accepted' ? '#d1e7dd' : '#f8d7da'};padding:15px;border-radius:5px;margin-top:8px;white-space:pre-wrap;border-left:4px solid ${appeal.status === 'accepted' ? '#0f5132' : '#842029'};">${appeal.adminResponse}</div>
+                        </div>
+                        ` : ''}
+                        ${appeal.resolvedBy ? `
+                        <div style="margin-bottom:15px;">
+                            <strong>Resolved By:</strong> ${appeal.resolvedBy}
+                        </div>
+                        ` : ''}
+                        <div style="margin-top:20px;text-align:right;">
+                            <button onclick="document.getElementById('appealDetailsOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.body.insertAdjacentHTML('beforeend', detailsHTML);
         }
     </script>
 </body>

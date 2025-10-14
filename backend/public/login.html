@@ -147,52 +147,167 @@
             opacity: 0.7;
             cursor: not-allowed;
         }
+
+        .tabs-container {
+            display: flex;
+            border-bottom: 2px solid #e0e0e0;
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 1rem;
+            text-align: center;
+            background: transparent;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .tab:hover {
+            color: #667eea;
+        }
+
+        .tab.active {
+            color: #667eea;
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .registration-link {
+            text-align: center;
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .registration-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .registration-link a:hover {
+            text-decoration: underline;
+        }
     </style>
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
             <h1>Pramaan</h1>
-            <p>Blockchain Certificate Management System</p>
+            <p>Sports Certificate Management - Maharashtra</p>
         </div>
 
         <div class="login-form">
+            <div class="tabs-container">
+                <button class="tab active" onclick="switchTab('admin')">
+                    🔐 Admin
+                </button>
+                <button class="tab" onclick="switchTab('athlete')">
+                    🏃 Athletes
+                </button>
+            </div>
+
             <div id="errorMessage" class="error-message"></div>
             <div id="successMessage" class="success-message"></div>
 
-            <form id="loginForm">
-                <div class="form-group">
-                    <label for="did">Digital Identity (DID)</label>
-                    <input
-                        type="text"
-                        id="did"
-                        name="did"
-                        placeholder="did:example:youridentity"
-                        required
-                    >
+            <!-- Admin Login Tab -->
+            <div id="adminTab" class="tab-content active">
+                <form id="adminLoginForm">
+                    <div class="form-group">
+                        <label for="adminUsername">Username</label>
+                        <input
+                            type="text"
+                            id="adminUsername"
+                            name="username"
+                            placeholder="Enter your username"
+                            required
+                            autocomplete="username"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adminPassword">Password</label>
+                        <input
+                            type="password"
+                            id="adminPassword"
+                            name="password"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-login" id="adminLoginBtn">
+                        <span id="adminBtnText">Login to Admin Dashboard</span>
+                        <div class="loader" id="adminLoader"></div>
+                    </button>
+                </form>
+
+                <div class="demo-credentials">
+                    <strong>Demo Admin Credentials:</strong><br>
+                    Username: admin<br>
+                    Password: admin123
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="password">Password</label>
-                    <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        placeholder="Enter your password"
-                        required
-                    >
+            <!-- Athlete Login Tab -->
+            <div id="athleteTab" class="tab-content">
+                <form id="athleteLoginForm">
+                    <div class="form-group">
+                        <label for="athleteEmail">Email</label>
+                        <input
+                            type="email"
+                            id="athleteEmail"
+                            name="email"
+                            placeholder="Enter your email"
+                            required
+                            autocomplete="email"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="athletePassword">Password</label>
+                        <input
+                            type="password"
+                            id="athletePassword"
+                            name="password"
+                            placeholder="Enter your password"
+                            required
+                            autocomplete="current-password"
+                        >
+                    </div>
+
+                    <button type="submit" class="btn-login" id="athleteLoginBtn">
+                        <span id="athleteBtnText">Login to Athlete Dashboard</span>
+                        <div class="loader" id="athleteLoader"></div>
+                    </button>
+                </form>
+
+                <div class="registration-link">
+                    Don't have an account? <a href="/static/athlete-registration.html">Register here</a>
                 </div>
-
-                <button type="submit" class="btn-login" id="loginBtn">
-                    <span id="btnText">Login to Dashboard</span>
-                    <div class="loader" id="loader"></div>
-                </button>
-            </form>
-
-            <div class="demo-credentials">
-                <strong>Demo Credentials:</strong><br>
-                DID: did:example:123456789<br>
-                Password: testpass123
             </div>
         </div>
     </div>

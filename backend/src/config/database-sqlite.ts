@@ -38,13 +38,15 @@ export async function initializeDatabase(): Promise<void> {
 
       CREATE TABLE IF NOT EXISTS issuers (
         id TEXT PRIMARY KEY,
-        did TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        did TEXT UNIQUE,
         name TEXT NOT NULL,
         organization TEXT,
         email TEXT,
-        password_hash TEXT,
+        password_hash TEXT NOT NULL,
         public_key TEXT,
         wallet_address TEXT,
+        role TEXT DEFAULT 'admin',
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -61,6 +63,7 @@ export async function initializeDatabase(): Promise<void> {
         password_hash TEXT NOT NULL,
         district TEXT,
         state TEXT,
+        father_name TEXT,
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -99,18 +102,21 @@ export async function initializeDatabase(): Promise<void> {
 
       CREATE TABLE IF NOT EXISTS complaints (
         id TEXT PRIMARY KEY,
-        cert_hash TEXT NOT NULL,
+        cert_hash TEXT,
+        athlete_id TEXT,
         name TEXT NOT NULL,
         email TEXT NOT NULL,
         type TEXT NOT NULL,
         description TEXT NOT NULL,
         status TEXT DEFAULT 'pending',
         resolution TEXT,
+        supporting_documents TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         resolved_at DATETIME,
         resolved_by TEXT,
-        FOREIGN KEY (cert_hash) REFERENCES certificates(cert_hash)
+        FOREIGN KEY (cert_hash) REFERENCES certificates(cert_hash),
+        FOREIGN KEY (athlete_id) REFERENCES athletes(id)
       );
 
       CREATE TABLE IF NOT EXISTS athlete_competitions (
@@ -118,16 +124,30 @@ export async function initializeDatabase(): Promise<void> {
         athlete_id TEXT,
         unique_id TEXT,
         aadhar_number TEXT,
+        full_name TEXT,
+        father_name TEXT,
+        dob TEXT,
+        district TEXT,
+        representing_district TEXT,
+        division_state_country TEXT,
+        game_name TEXT,
         competition_name TEXT NOT NULL,
         competition_type TEXT NOT NULL,
+        competition_period TEXT,
+        competition_held_at TEXT,
+        competition_level TEXT,
+        position_obtained TEXT,
+        certificate_no TEXT,
+        valid_for_employment_group TEXT,
+        applicable_govt_resolutions TEXT,
         event_name TEXT,
         position INTEGER,
         medal_type TEXT,
         competition_date TEXT,
-        competition_level TEXT,
         organizing_body TEXT,
         location TEXT,
         certificate_issued BOOLEAN DEFAULT 0,
+        certificate_requested BOOLEAN DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (athlete_id) REFERENCES athletes(id)
       );
@@ -135,16 +155,19 @@ export async function initializeDatabase(): Promise<void> {
       CREATE TABLE IF NOT EXISTS quota_certificate_requests (
         id TEXT PRIMARY KEY,
         athlete_id TEXT NOT NULL,
-        unique_id TEXT NOT NULL,
-        aadhar_number TEXT NOT NULL,
-        selected_records TEXT NOT NULL,
+        competition_record_id TEXT NOT NULL,
+        unique_id TEXT,
+        aadhar_number TEXT,
         status TEXT DEFAULT 'pending',
         certificate_id TEXT,
+        certificate_hash TEXT,
         admin_notes TEXT,
         requested_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         processed_at DATETIME,
         processed_by TEXT,
+        rejection_reason TEXT,
         FOREIGN KEY (athlete_id) REFERENCES athletes(id),
+        FOREIGN KEY (competition_record_id) REFERENCES athlete_competitions(id),
         FOREIGN KEY (certificate_id) REFERENCES certificates(id)
       );
 
@@ -162,6 +185,20 @@ export async function initializeDatabase(): Promise<void> {
         resolved_at DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (request_id) REFERENCES quota_certificate_requests(id),
+        FOREIGN KEY (athlete_id) REFERENCES athletes(id)
+      );
+
+      CREATE TABLE IF NOT EXISTS appeals (
+        id TEXT PRIMARY KEY,
+        request_id TEXT NOT NULL,
+        athlete_id TEXT NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        admin_response TEXT,
+        resolved_by TEXT,
+        resolved_at DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (request_id) REFERENCES quota_certificate_requests(id),
         FOREIGN KEY (athlete_id) REFERENCES athletes(id)
       );
@@ -186,23 +223,28 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_appeals_request ON certificate_appeals(request_id);
       CREATE INDEX IF NOT EXISTS idx_appeals_status ON certificate_appeals(status);
       CREATE INDEX IF NOT EXISTS idx_appeals_level ON certificate_appeals(appeal_level);
+      CREATE INDEX IF NOT EXISTS idx_new_appeals_athlete ON appeals(athlete_id);
+      CREATE INDEX IF NOT EXISTS idx_new_appeals_request ON appeals(request_id);
+      CREATE INDEX IF NOT EXISTS idx_new_appeals_status ON appeals(status);
     `);
 
-    // Insert default issuer with hashed password
+    // Insert default admin user with hashed password
     const bcrypt = require('bcrypt');
-    const defaultPassword = 'testpass123';
+    const defaultPassword = 'admin123';
     const passwordHash = await bcrypt.hash(defaultPassword, 10);
 
     await db.run(`
-      INSERT OR IGNORE INTO issuers (id, did, name, organization, email, password_hash, wallet_address)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT OR IGNORE INTO issuers (id, username, did, name, organization, email, password_hash, role, wallet_address)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       '123e4567-e89b-12d3-a456-426614174000',
+      'admin',
       'did:example:123456789',
-      'Test University',
-      'Education Department',
-      'admin@testuniversity.edu',
+      'System Administrator',
+      'Directorate of Sports and Youth Services, Maharashtra',
+      'admin@sports.maharashtra.gov.in',
       passwordHash,
+      'admin',
       '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266'
     ]);
 

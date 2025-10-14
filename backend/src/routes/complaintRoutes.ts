@@ -3,11 +3,48 @@ import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database-sqlite';
 import { logger } from '../utils/logger';
 import { asyncHandler } from '../middleware/asyncHandler';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 
 const router = Router();
 
-// Create a new complaint
-router.post('/create', asyncHandler(async (req: Request, res: Response) => {
+// Configure multer for complaint document uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/complaints');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    // Accept only specific file types
+    const allowedTypes = /jpeg|jpg|png|pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only images, PDFs, and Word documents are allowed'));
+    }
+  }
+});
+
+// Create a new complaint (with optional file uploads)
+router.post('/create', upload.array('documents', 5), asyncHandler(async (req: Request, res: Response) => {
   const { certHash, name, email, type, description } = req.body;
 
   // Validate required fields
@@ -52,19 +89,36 @@ router.post('/create', asyncHandler(async (req: Request, res: Response) => {
 
     const complaintId = uuidv4();
 
-    // Insert complaint
+    // Handle uploaded files
+    const uploadedFiles = req.files as Express.Multer.File[];
+    let supportingDocuments = null;
+
+    if (uploadedFiles && uploadedFiles.length > 0) {
+      // Store file paths as JSON
+      const filePaths = uploadedFiles.map(file => ({
+        originalName: file.originalname,
+        filename: file.filename,
+        path: file.path,
+        size: file.size,
+        mimetype: file.mimetype
+      }));
+      supportingDocuments = JSON.stringify(filePaths);
+    }
+
+    // Insert complaint with supporting documents
     await query(
-      `INSERT INTO complaints (id, cert_hash, name, email, type, description, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'pending')`,
-      [complaintId, certHash, name, email, type, description]
+      `INSERT INTO complaints (id, cert_hash, name, email, type, description, supporting_documents, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [complaintId, certHash, name, email, type, description, supportingDocuments]
     );
 
-    logger.info(`Complaint created: ${complaintId} for certificate ${certHash}`);
+    logger.info(`Complaint created: ${complaintId} for certificate ${certHash} with ${uploadedFiles?.length || 0} documents`);
 
     res.status(201).json({
       success: true,
       message: 'Complaint submitted successfully',
-      complaintId
+      complaintId,
+      documentsUploaded: uploadedFiles?.length || 0
     });
   } catch (error) {
     logger.error('Error creating complaint:', error);

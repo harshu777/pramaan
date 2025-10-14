@@ -39,7 +39,7 @@ class PDFService {
         const doc = new PDFDocument({
           size: 'A4',
           layout: 'portrait',
-          margin: 30
+          margin: 0
         });
 
         const chunks: Buffer[] = [];
@@ -51,308 +51,139 @@ class PDFService {
         const pageHeight = doc.page.height;
         const centerX = pageWidth / 2;
 
-        // Decorative golden border with corner ornaments
-        // Outer border
-        doc.rect(20, 20, pageWidth - 40, pageHeight - 40)
-           .strokeColor('#D4AF37')
-           .lineWidth(3)
-           .stroke();
-
-        // Inner border
-        doc.rect(30, 30, pageWidth - 60, pageHeight - 60)
-           .strokeColor('#B8860B')
-           .lineWidth(1)
-           .stroke();
-
-        // Three logos at the top
+        // Use the new certificate template as background
         const imagesPath = path.join(__dirname, '../../public/images');
+        const templatePath = path.join(imagesPath, 'certificate-template.jpg');
 
-        // Government Emblem (center) - PNG works
-        try {
-          const emblemPath = path.join(imagesPath, 'NE_Preview1.png');
-          if (fs.existsSync(emblemPath)) {
-            doc.image(emblemPath, centerX - 30, 45, { width: 60, height: 60 });
-          }
-        } catch (e) {
-          // Skip if image fails
+        if (fs.existsSync(templatePath)) {
+          // Add template image as background covering full page
+          doc.image(templatePath, 0, 0, { width: pageWidth, height: pageHeight });
+        } else {
+          logger.warn('Certificate template not found, using fallback design');
         }
 
-        // Sports Logo (right) - JPEG works
-        try {
-          const sportsLogoPath = path.join(imagesPath, 'images.jpeg');
-          if (fs.existsSync(sportsLogoPath)) {
-            doc.image(sportsLogoPath, pageWidth - 120, 45, { width: 60, height: 60 });
-          }
-        } catch (e) {
-          // Skip if image fails
-        }
-
-        // Text placeholder for Maharashtra Seal (left) since SVG doesn't work with PDFKit
-        doc.fontSize(10)
-           .fillColor('#000000')
-           .font('Helvetica-Bold')
-           .text('Maharashtra', 60, 60, { width: 60, align: 'center' })
-           .text('State', 60, 75, { width: 60, align: 'center' });
-
-        // Organization Header
-        doc.fontSize(14)
-           .fillColor('#8B0000')
-           .font('Helvetica-Bold')
-           .text('Directorate of Sports and Youth Services,', 50, 115, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        doc.fontSize(13)
-           .text('Maharashtra State', 50, 135, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        doc.fontSize(10)
-           .font('Helvetica')
-           .fillColor('#000000')
-           .text('Shivchhatrapati Sports Complex,Mahalunge-Balewadi,Pune-411045', 50, 155, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        // Contact info
-        doc.fontSize(9)
-           .text('Website: sports.maharashtra.gov.in', 100, 175);
-
-        doc.text('Email: desk15.dsys-mh@gov.in', pageWidth - 200, 175);
-
-        // Certificate Title
-        doc.fontSize(12)
-           .font('Helvetica-Bold')
-           .text('Certificate to a Meritorious Sports Person for', 50, 200, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        doc.text('Employment to Group A/B/C/D Service under the', 50, 220, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        doc.text('State Government', 50, 240, {
-             align: 'center',
-             width: pageWidth - 100
-           });
-
-        // Certificate Number and Date
-        const leftMargin = 60;
-        const rightMargin = pageWidth - 60;
+        // Now overlay text on the template at specific positions
+        // Based on the template image positions
+        const leftMargin = 260;  // Start position for field values (after labels)
+        const rightMargin = pageWidth - 45;
         const fieldWidth = rightMargin - leftMargin;
 
-        doc.fontSize(11)
-           .font('Helvetica')
-           .text('No.', leftMargin, 270);
-
-        // Draw underline for certificate number
-        doc.moveTo(leftMargin + 25, 280)
-           .lineTo(centerX - 50, 280)
-           .strokeColor('#000000')
-           .lineWidth(0.5)
-           .stroke();
+        // Certificate Number and Date (top right area)
+        doc.fontSize(10)
+           .fillColor('#000000')
+           .font('Helvetica');
 
         if (data.certificateNo) {
-          doc.text(data.certificateNo, leftMargin + 30, 268);
+          doc.text(data.certificateNo, 75, 224, { width: 150 });
         }
-
-        doc.text('Date', centerX + 50, 270);
-
-        // Draw underline for date
-        doc.moveTo(centerX + 80, 280)
-           .lineTo(rightMargin, 280)
-           .stroke();
 
         if (data.issueDate) {
-          doc.text(data.issueDate, centerX + 85, 268);
+          doc.text(data.issueDate, 420, 224, { width: 150 });
         }
 
-        // Form fields
-        let yPos = 300;
-        const lineHeight = 25;
+        // Name of the Sports Person
+        if (data.name) {
+          doc.fontSize(10).text(data.name, leftMargin, 264, { width: fieldWidth });
+        }
 
-        // Helper function to add field with underline
-        const addField = (label: string, value: string | undefined, y: number): number => {
-          doc.fontSize(11)
-             .font('Helvetica')
-             .text(label, leftMargin, y);
+        // Son/Wife/Daughter of
+        if (data.fatherName) {
+          doc.text(data.fatherName, leftMargin, 288, { width: fieldWidth });
+        }
 
-          const labelWidth = doc.widthOfString(label);
+        // Date of Birth
+        if (data.dob) {
+          doc.text(data.dob, leftMargin, 312, { width: fieldWidth });
+        }
 
-          // Draw underline
-          doc.moveTo(leftMargin + labelWidth + 5, y + 10)
-             .lineTo(rightMargin, y + 10)
-             .strokeColor('#000000')
-             .lineWidth(0.5)
-             .stroke();
+        // Resident of District
+        if (data.district) {
+          doc.text(data.district, leftMargin, 336, { width: fieldWidth });
+        }
 
-          if (value) {
-            doc.fontSize(10)
-               .text(value, leftMargin + labelWidth + 10, y);
+        // Representing (District/Division/State/Country)
+        if (data.representingDistrict || data.divisionStateCountry) {
+          const representingText = data.representingDistrict || '';
+          doc.text(representingText, leftMargin, 360, { width: fieldWidth });
+
+          if (data.divisionStateCountry) {
+            doc.text(data.divisionStateCountry, leftMargin, 384, { width: fieldWidth });
           }
-
-          return y + lineHeight;
-        };
-
-        yPos = addField('Name of the Sports Person', data.name, yPos);
-        yPos = addField('Son/Wife/Daughter of', data.fatherName, yPos);
-        yPos = addField('Date of Birth', data.dob, yPos);
-        yPos = addField('Resident of District', data.district, yPos);
-
-        // Representing field (aligned properly)
-        doc.fontSize(11)
-           .font('Helvetica')
-           .text('Representing', leftMargin, yPos);
-
-        const representingLabelWidth = doc.widthOfString('Representing');
-        doc.moveTo(leftMargin + representingLabelWidth + 5, yPos + 10)
-           .lineTo(rightMargin, yPos + 10)
-           .stroke();
-
-        if (data.representingDistrict) {
-          doc.fontSize(10).text(data.representingDistrict, leftMargin + representingLabelWidth + 10, yPos);
         }
 
-        yPos += lineHeight;
-
-        doc.fontSize(10)
-           .text('District/Division/State/Country', leftMargin, yPos);
-
-        if (data.divisionStateCountry) {
-          doc.text(data.divisionStateCountry, leftMargin + 160, yPos - 2);
+        // Name of the Game
+        if (data.gameName) {
+          doc.text(data.gameName, leftMargin, 432, { width: fieldWidth });
         }
 
-        yPos += lineHeight;
+        // Name of the Competition
+        if (data.competitionName) {
+          doc.text(data.competitionName, leftMargin, 456, { width: fieldWidth });
+        }
 
-        yPos = addField('Name of the Game', data.gameName, yPos);
-        yPos = addField('Name of the Competition', data.competitionName, yPos);
-        yPos = addField('Period of the Competition', data.competitionPeriod, yPos);
-        yPos = addField('Competition Held at', data.competitionHeldAt, yPos);
+        // Period of the Competition
+        if (data.competitionPeriod) {
+          doc.text(data.competitionPeriod, leftMargin, 480, { width: fieldWidth });
+        }
 
-        // Competition Level (aligned properly)
-        doc.fontSize(11)
-           .font('Helvetica')
-           .text('Competition Level', leftMargin, yPos);
+        // Competition Held at
+        if (data.competitionHeldAt) {
+          doc.text(data.competitionHeldAt, leftMargin, 504, { width: fieldWidth });
+        }
 
-        const competitionLevelWidth = doc.widthOfString('Competition Level');
-        doc.moveTo(leftMargin + competitionLevelWidth + 5, yPos + 10)
-           .lineTo(rightMargin, yPos + 10)
-           .stroke();
-
+        // Competition Level
         if (data.competitionLevel) {
-          doc.fontSize(10).text(data.competitionLevel, leftMargin + competitionLevelWidth + 10, yPos);
+          doc.text(data.competitionLevel, leftMargin, 528, { width: fieldWidth });
         }
 
-        yPos += lineHeight;
+        // Position Obtained
+        if (data.positionObtained) {
+          doc.text(data.positionObtained, leftMargin, 576, { width: fieldWidth });
+        }
 
-        doc.fontSize(9)
-           .text('(State/National/International)', leftMargin, yPos);
+        // Certificate No. (appears again in the form)
+        if (data.certificateNo) {
+          doc.text(data.certificateNo, leftMargin, 600, { width: fieldWidth });
+        }
 
-        yPos += lineHeight;
+        // Valid for employment to Group
+        if (data.validForEmploymentGroup) {
+          doc.text(data.validForEmploymentGroup, leftMargin, 624, { width: fieldWidth });
+        }
 
-        yPos = addField('Position Obtained', data.positionObtained, yPos);
+        // Applicable Government Resolutions
+        if (data.applicableGovtResolutions) {
+          doc.fontSize(9).text(data.applicableGovtResolutions, leftMargin, 648, { width: fieldWidth });
+        }
 
-        // Remove duplicate Certificate No. field as it's already added above
-
-        yPos = addField('Valid for employment to Group', data.validForEmploymentGroup, yPos);
-
-        // Applicable Government Resolutions - combine into single field
-        yPos = addField('Applicable Government Resolutions', data.applicableGovtResolutions, yPos);
-
-        // Add some space before footer
-        yPos += lineHeight * 2;
-
-        // Footer text - position dynamically based on content
-        const footerY = Math.min(yPos + 20, pageHeight - 200);
-        doc.fontSize(9)
-           .font('Helvetica')
-           .fillColor('#000000')
-           .text('This Certificate is being issued based on records available in this office.',
-                 leftMargin, footerY, {
-                   align: 'center',
-                   width: fieldWidth
-                 });
-
-        // QR Code - position relative to footer
+        // QR Code - position at bottom left as per template
         if (data.certHash) {
           const qrData = `${process.env.QR_BASE_URL || 'http://localhost:3000'}/static/validation.html?hash=${data.certHash}`;
           const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
             errorCorrectionLevel: 'H',
             type: 'image/png',
-            width: 100,
+            width: 120,
             margin: 1,
           });
 
           const qrCodeBuffer = Buffer.from(qrCodeDataUrl.split(',')[1], 'base64');
-          const qrY = Math.min(footerY + 20, pageHeight - 180);
-          doc.image(qrCodeBuffer, leftMargin, qrY, { width: 80, height: 80 });
-
-          doc.fontSize(8)
-             .fillColor('#000000')
-             .text('SCAN ME', leftMargin + 15, qrY + 85);
+          // Position QR code at bottom left (around where "SCAN ME" text is in template)
+          doc.image(qrCodeBuffer, 85, 710, { width: 90, height: 90 });
         }
 
-        // Signature section
-        doc.fontSize(11)
-           .font('Helvetica')
-           .fillColor('#000000')
-           .text('Deputy Director,', pageWidth - 180, pageHeight - 160);
-
-        doc.text('Sports and Youth Services,', pageWidth - 180, pageHeight - 145);
-        doc.text('Maharashtra', pageWidth - 180, pageHeight - 130);
-
-        // Digital signature indicator if present
+        // Digital signature indicator if present (optional, can be added)
         if (data.digitalSignature) {
-          doc.fontSize(7)
-             .fillColor('#0066cc')
-             .text('Digitally Signed', pageWidth - 180, pageHeight - 115);
-
           doc.fontSize(6)
-             .fillColor('#666666')
-             .text(`Algorithm: ${data.digitalSignature.algorithm}`, pageWidth - 180, pageHeight - 105);
+             .fillColor('#0066cc')
+             .text(`Digital Signature: ${data.digitalSignature.algorithm}`, 400, 710);
 
-          doc.text(`Timestamp: ${new Date(data.digitalSignature.timestamp).toLocaleString('en-IN')}`, pageWidth - 180, pageHeight - 95);
+          doc.fontSize(5)
+             .fillColor('#666666')
+             .text(`Timestamp: ${new Date(data.digitalSignature.timestamp).toLocaleString('en-IN')}`, 400, 720);
         }
 
-        // Disclaimer
-        doc.fontSize(7)
-           .font('Helvetica')
-           .fillColor('#333333')
-           .text('Disclaimer : This certificate is granted based on records submitted by the relevant State Sports Association or event organizer. The Directorate of Sports and Youth Services (DSYS) reserves the right to revoke this certificate if any objections arise. The issuing sports association is solely responsible for the authenticity of the provided documentation. The certificate\'s validity for sports reservation purposes is subject to the rules and policies in effect at the time of recruitment.',
-                 leftMargin, pageHeight - 80, {
-                   align: 'justify',
-                   width: fieldWidth
-                 });
-
-        // Software watermark
-        doc.fontSize(7)
-           .fillColor('#666666')
-           .text('This is software generated verification certificate and need not to be verified again.',
-                 leftMargin, pageHeight - 40, {
-                   align: 'center',
-                   width: fieldWidth
-                 });
-
-        doc.text('You can verify through QR code.',
-                 leftMargin, pageHeight - 30, {
-                   align: 'center',
-                   width: fieldWidth
-                 });
-
-        // Add corner decorations (optional ornamental elements)
-        // Top-left corner
-        doc.circle(35, 35, 3).fillColor('#D4AF37').fill();
-        // Top-right corner
-        doc.circle(pageWidth - 35, 35, 3).fillColor('#D4AF37').fill();
-        // Bottom-left corner
-        doc.circle(35, pageHeight - 35, 3).fillColor('#D4AF37').fill();
-        // Bottom-right corner
-        doc.circle(pageWidth - 35, pageHeight - 35, 3).fillColor('#D4AF37').fill();
+        // Note: Signature section, disclaimer, and footer text are already part of the template image
+        // No need to add them programmatically
 
         doc.end();
       } catch (error) {

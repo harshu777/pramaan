@@ -10,19 +10,19 @@ const router = Router();
 
 router.post('/register',
   asyncHandler(async (req: Request, res: Response) => {
-    const { did, name, organization, email, password, walletAddress } = req.body;
+    const { username, name, organization, email, password, role } = req.body;
 
-    if (!did || !name || !email || !password) {
+    if (!username || !name || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields',
+        message: 'Missing required fields: username, name, email, password',
       });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
     const insertQuery = `
-      INSERT INTO issuers (id, did, name, organization, email, wallet_address, password_hash)
+      INSERT INTO issuers (id, username, name, organization, email, password_hash, role)
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -30,26 +30,26 @@ router.post('/register',
       const issuerId = crypto.randomUUID();
       await query(insertQuery, [
         issuerId,
-        did,
+        username,
         name,
         organization,
         email,
-        walletAddress,
-        hashedPassword
+        hashedPassword,
+        role || 'admin'
       ]);
 
-      const issuer = { id: issuerId, did, name, organization, email, is_active: true };
+      const issuer = { id: issuerId, username, name, organization, email, role: role || 'admin', is_active: true };
 
       res.status(201).json({
         success: true,
-        message: 'Issuer registered successfully',
+        message: 'Admin user registered successfully',
         data: issuer,
       });
     } catch (error: any) {
-      if (error.code === '23505') {
+      if (error.code === '23505' || error.message.includes('UNIQUE')) {
         return res.status(400).json({
           success: false,
-          message: 'Issuer with this DID already exists',
+          message: 'User with this username already exists',
         });
       }
       throw error;
@@ -59,18 +59,18 @@ router.post('/register',
 
 router.post('/login',
   asyncHandler(async (req: Request, res: Response) => {
-    const { did, password } = req.body;
+    const { username, password } = req.body;
 
-    if (!did || !password) {
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'DID and password are required',
+        message: 'Username and password are required',
       });
     }
 
     const result = await query(
-      'SELECT * FROM issuers WHERE did = ? AND is_active = 1',
-      [did]
+      'SELECT * FROM issuers WHERE username = ? AND is_active = 1',
+      [username]
     );
 
     if (result.rows.length === 0) {
@@ -82,16 +82,14 @@ router.post('/login',
 
     const issuer = result.rows[0];
 
-    // Check if password_hash exists, fallback to public_key for backward compatibility
-    const passwordHash = issuer.password_hash || issuer.public_key;
-    if (!passwordHash) {
+    if (!issuer.password_hash) {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials',
       });
     }
 
-    const isValid = await bcrypt.compare(password, passwordHash);
+    const isValid = await bcrypt.compare(password, issuer.password_hash);
 
     if (!isValid) {
       return res.status(401).json({
@@ -103,8 +101,9 @@ router.post('/login',
     const token = jwt.sign(
       {
         id: issuer.id,
-        did: issuer.did,
+        username: issuer.username,
         name: issuer.name,
+        role: issuer.role || 'admin',
         type: 'issuer'
       },
       process.env.JWT_SECRET || 'secret',
@@ -116,10 +115,11 @@ router.post('/login',
       token,
       issuer: {
         id: issuer.id,
-        did: issuer.did,
+        username: issuer.username,
         name: issuer.name,
         organization: issuer.organization,
         email: issuer.email,
+        role: issuer.role || 'admin'
       },
     });
   })
@@ -128,7 +128,7 @@ router.post('/login',
 router.get('/list',
   asyncHandler(async (req: Request, res: Response) => {
     const result = await query(
-      'SELECT id, did, name, organization, email, is_active, created_at FROM issuers ORDER BY created_at DESC'
+      'SELECT id, username, name, organization, email, role, is_active, created_at FROM issuers ORDER BY created_at DESC'
     );
 
     res.json({
