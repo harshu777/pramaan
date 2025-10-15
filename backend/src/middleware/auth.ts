@@ -42,7 +42,7 @@ export async function authenticate(
       next();
     } else {
       // Default to issuer authentication
-      const result = await query('SELECT * FROM issuers WHERE did = ? AND is_active = 1', [decoded.did]);
+      const result = await query('SELECT * FROM issuers WHERE id = ? AND is_active = 1', [decoded.id]);
 
       if (result.rows.length === 0) {
         res.status(401).json({

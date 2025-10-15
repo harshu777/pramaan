@@ -408,7 +408,7 @@ router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: R
   });
 }));
 
-// Request certificate for a competition record
+// Request certificate for a competition record - Auto-approve and generate immediately
 router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;
   const { recordId } = req.params;
@@ -443,27 +443,131 @@ router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (
     return res.status(400).json({ success: false, message: 'Request already exists for this record' });
   }
 
-  // Create certificate request
-  const { v4: uuidv4 } = await import('uuid');
-  const requestId = uuidv4();
+  // Get athlete email
+  const athleteResult = await query('SELECT * FROM athletes WHERE id = ?', [user.id]);
+  if (athleteResult.rows.length === 0) {
+    return res.status(404).json({ success: false, message: 'Athlete not found' });
+  }
+  const athlete = athleteResult.rows[0];
 
-  await query(`
-    INSERT INTO quota_certificate_requests (
-      id, athlete_id, competition_record_id, status, requested_at
-    ) VALUES (?, ?, ?, ?, datetime('now'))
-  `, [requestId, user.id, recordId, 'pending']);
+  // Auto-generate certificate immediately (no admin approval needed)
+  const { certificateService } = await import('../services/certificateService');
+  const { pdfService } = await import('../services/pdfService');
+  const { emailService } = await import('../services/emailService');
 
-  // Update competition record
-  await query(
-    'UPDATE athlete_competitions SET certificate_requested = 1 WHERE id = ?',
-    [recordId]
-  );
+  try {
+    // Create certificate request
+    const requestId = uuidv4();
+    await query(`
+      INSERT INTO quota_certificate_requests (
+        id, athlete_id, competition_record_id, status, requested_at, processed_at, processed_by
+      ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), ?)
+    `, [requestId, user.id, recordId, 'approved', 'system-auto-approved']);
 
-  res.json({
-    success: true,
-    message: 'Certificate request submitted successfully',
-    requestId
-  });
+    // Generate certificate
+    const certificateData = {
+      issuerDid: 'system',
+      issuerName: 'Directorate of Sports and Youth Services',
+      subjectName: record.full_name,
+      subjectEmail: athlete.email,
+      certificateType: record.competition_type || 'Sports Achievement',
+      metadata: {
+        fatherName: record.father_name,
+        dob: record.dob,
+        district: record.district,
+        representingDistrict: record.representing_district,
+        divisionStateCountry: record.division_state_country,
+        gameName: record.game_name,
+        competitionName: record.competition_name,
+        competitionPeriod: record.competition_period,
+        competitionHeldAt: record.competition_held_at,
+        competitionLevel: record.competition_level,
+        positionObtained: record.position_obtained,
+        certificateNo: record.certificate_no,
+        validForEmploymentGroup: record.valid_for_employment_group,
+        applicableGovtResolutions: record.applicable_govt_resolutions
+      }
+    };
+
+    const certificate = await certificateService.issueCertificate(certificateData);
+
+    // Get certificate with digital signature
+    const dbResult = await certificateService.validateCertificate(certificate.certHash);
+    const digitalSignature = dbResult.certificate?.digitalSignature || null;
+
+    // Generate PDF
+    const pdfData = {
+      name: record.full_name,
+      fatherName: record.father_name,
+      dob: record.dob,
+      district: record.district,
+      representingDistrict: record.representing_district,
+      divisionStateCountry: record.division_state_country,
+      gameName: record.game_name,
+      competitionName: record.competition_name,
+      competitionPeriod: record.competition_period,
+      competitionHeldAt: record.competition_held_at,
+      competitionLevel: record.competition_level,
+      positionObtained: record.position_obtained,
+      certificateNo: record.certificate_no,
+      validForEmploymentGroup: record.valid_for_employment_group,
+      applicableGovtResolutions: record.applicable_govt_resolutions,
+      certHash: certificate.certHash,
+      issuerName: 'Deputy Director',
+      issuerTitle: 'Deputy Director',
+      organizationName: 'Sports and Youth Services, Maharashtra State',
+      issueDate: new Date().toLocaleDateString('en-IN'),
+      digitalSignature
+    };
+
+    const pdfBuffer = await pdfService.generateCertificatePDF(pdfData);
+
+    // Send email
+    if (athlete.email) {
+      await emailService.sendCertificateEmail(
+        athlete.email,
+        record.full_name,
+        certificate.certHash,
+        pdfBuffer,
+        certificateData.certificateType
+      );
+    }
+
+    // Update request with certificate info
+    await query(`
+      UPDATE quota_certificate_requests
+      SET certificate_id = ?, certificate_hash = ?
+      WHERE id = ?
+    `, [certificate.id, certificate.certHash, requestId]);
+
+    // Mark competition record as certificate issued
+    await query(
+      'UPDATE athlete_competitions SET certificate_issued = 1, certificate_requested = 1 WHERE id = ?',
+      [recordId]
+    );
+
+    // Create certificate assignment
+    await query(`
+      INSERT INTO certificate_assignments (id, certificate_id, athlete_id, assigned_by)
+      VALUES (?, ?, ?, ?)
+    `, [uuidv4(), certificate.id, user.id, 'system-auto-approved']);
+
+    logger.info(`Certificate auto-generated for athlete ${user.id}, request ${requestId}`);
+
+    res.json({
+      success: true,
+      message: 'Certificate generated and issued successfully',
+      requestId,
+      certificateHash: certificate.certHash
+    });
+
+  } catch (error) {
+    logger.error('Error auto-generating certificate:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to generate certificate: ' + (error instanceof Error ? error.message : 'Unknown error')
+    });
+  }
 }));
 
 // Get athlete's certificate requests

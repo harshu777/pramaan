@@ -1113,9 +1113,10 @@
                                 <div style="margin-bottom:10px;"><strong>Type:</strong> ${escapeHtml(cert.certificateType || 'N/A')}</div>
                                 <div style="margin-bottom:10px;"><strong>Issued:</strong> ${formatDate(cert.issuedDate)}</div>
                                 <div style="margin-bottom:10px;"><strong>Issuer:</strong> ${escapeHtml(cert.issuerName || 'N/A')}</div>
-                                <div style="margin-top:15px;display:flex;gap:10px;">
+                                <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
                                     <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#667eea;color:white;border:none;border-radius:6px;cursor:pointer;">Download</button>
                                     <button onclick="window.open('/api/certificates/verify/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">Validate</button>
+                                    <button onclick="document.getElementById('issuedCertsOverlay').remove();raiseComplaint('${cert.certHash}')" style="padding:8px 16px;background:#ff6b6b;color:white;border:none;border-radius:6px;cursor:pointer;">Raise Complaint</button>
                                 </div>
                             </div>
                         `;
