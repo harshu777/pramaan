@@ -10,6 +10,122 @@ import { emailService } from '../services/emailService';
 
 const router = Router();
 
+// Get all bulk uploaded competition records (admin view)
+router.get('/bulk-uploaded-records', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  if (user.type !== 'issuer') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied - Admin only'
+    });
+  }
+
+  // Get all competition records from bulk upload
+  // Records without athlete_id are from bulk upload and haven't been claimed yet
+  const includeAll = req.query.includeAll === 'true';
+
+  let queryStr = `
+    SELECT
+      ac.*,
+      a.full_name as linked_athlete_name,
+      a.email as linked_athlete_email,
+      a.phone_number as linked_athlete_phone,
+      (SELECT COUNT(*) FROM quota_certificate_requests WHERE competition_record_id = ac.id) as request_count
+    FROM athlete_competitions ac
+    LEFT JOIN athletes a ON ac.athlete_id = a.id
+  `;
+
+  if (!includeAll) {
+    queryStr += ' WHERE ac.athlete_id IS NULL';
+  }
+
+  queryStr += ' ORDER BY ac.created_at DESC';
+
+  const result = await query(queryStr, []);
+
+  const records = result.rows.map((row: any) => ({
+    id: row.id,
+    fullName: row.full_name,
+    fatherName: row.father_name,
+    dob: row.dob,
+    district: row.district,
+    representingDistrict: row.representing_district,
+    divisionStateCountry: row.division_state_country,
+    gameName: row.game_name,
+    competitionName: row.competition_name,
+    competitionType: row.competition_type,
+    competitionPeriod: row.competition_period,
+    competitionHeldAt: row.competition_held_at,
+    competitionLevel: row.competition_level,
+    positionObtained: row.position_obtained,
+    certificateNo: row.certificate_no,
+    validForEmploymentGroup: row.valid_for_employment_group,
+    applicableGovtResolutions: row.applicable_govt_resolutions,
+    certificateIssued: row.certificate_issued,
+    certificateRequested: row.certificate_requested,
+    athleteId: row.athlete_id,
+    linkedAthlete: row.athlete_id ? {
+      name: row.linked_athlete_name,
+      email: row.linked_athlete_email,
+      phone: row.linked_athlete_phone
+    } : null,
+    requestCount: row.request_count,
+    createdAt: row.created_at
+  }));
+
+  res.json({
+    success: true,
+    records,
+    count: records.length,
+    unclaimedCount: records.filter((r: any) => !r.athleteId).length,
+    claimedCount: records.filter((r: any) => r.athleteId).length
+  });
+}));
+
+// Delete bulk uploaded record
+router.delete('/bulk-uploaded-records/:recordId', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { recordId } = req.params;
+
+  if (user.type !== 'issuer') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied - Admin only'
+    });
+  }
+
+  // Check if record exists
+  const recordResult = await query('SELECT * FROM athlete_competitions WHERE id = ?', [recordId]);
+
+  if (recordResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Record not found'
+    });
+  }
+
+  const record = recordResult.rows[0];
+
+  // Check if record has been claimed or certificate issued
+  if (record.athlete_id || record.certificate_issued) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cannot delete: Record has been claimed by an athlete or certificate has been issued'
+    });
+  }
+
+  // Delete the record
+  await query('DELETE FROM athlete_competitions WHERE id = ?', [recordId]);
+
+  logger.info(`Bulk upload record ${recordId} deleted by ${user.username || user.name}`);
+
+  res.json({
+    success: true,
+    message: 'Record deleted successfully'
+  });
+}));
+
 // Get all certificate requests
 router.get('/certificate-requests', authenticate, asyncHandler(async (req: Request, res: Response) => {
   const user = (req as any).user;

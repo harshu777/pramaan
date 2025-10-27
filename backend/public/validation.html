@@ -311,24 +311,6 @@
             margin-bottom: 1rem;
         }
 
-        .qr-upload {
-            border: 2px dashed #667eea;
-            border-radius: 10px;
-            padding: 2rem;
-            text-align: center;
-            background: #f8f9ff;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .qr-upload:hover {
-            background: #eef1ff;
-        }
-
-        .qr-upload input[type="file"] {
-            display: none;
-        }
-
         @media (max-width: 768px) {
             .header-content {
                 flex-direction: column;
@@ -370,7 +352,6 @@
             <div class="search-tabs">
                 <button class="tab-btn active" onclick="showTab('hash')">By Certificate Hash</button>
                 <button class="tab-btn" onclick="showTab('search')">Search Certificates</button>
-                <button class="tab-btn" onclick="showTab('qr')">Scan QR Code</button>
             </div>
 
             <div id="hash-tab" class="tab-content active">
@@ -387,18 +368,6 @@
                     <button class="search-btn" onclick="searchCertificates()">Search</button>
                 </div>
                 <div class="search-hints">Find certificates by entering recipient name, issuer name, or certificate type.</div>
-            </div>
-
-            <div id="qr-tab" class="tab-content">
-                <div class="qr-upload" onclick="document.getElementById('qrInput').click()">
-                    <input type="file" id="qrInput" accept="image/*" onchange="handleQRUpload(event)">
-                    <svg width="60" height="60" viewBox="0 0 24 24" fill="#667eea" style="margin-bottom: 1rem;">
-                        <path d="M9 3H5C3.9 3 3 3.9 3 5V9H5V5H9V3M15 3V5H19V9H21V5C21 3.9 20.1 3 19 3H15M5 15H3V19C3 20.1 3.9 21 5 21H9V19H5V15M19 19H15V21H19C20.1 21 21 20.1 21 19V15H19V19M12 8C10.3 8 9 9.3 9 11S10.3 14 12 14 15 12.7 15 11 13.7 8 12 8M12 16C9.2 16 7 13.8 7 11S9.2 6 12 6 17 8.2 17 11 14.8 16 12 16Z"/>
-                    </svg>
-                    <h3>Upload QR Code Image</h3>
-                    <p>Click to select or drag and drop a QR code image</p>
-                </div>
-                <div class="search-hints">Upload a certificate QR code image to quickly validate the certificate.</div>
             </div>
 
             <div class="error-msg" id="errorMsg"></div>
@@ -693,15 +662,6 @@
 
             resultsDiv.innerHTML = html;
             resultsDiv.classList.add('show');
-        }
-
-        function handleQRUpload(event) {
-            const file = event.target.files[0];
-            if (file) {
-                showError('QR code scanning feature coming soon. Please use the certificate hash instead.');
-                // In a production environment, you would use a QR code reader library
-                // to extract the certificate hash from the image and validate it
-            }
         }
 
         function showLoading(show) {

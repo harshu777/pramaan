@@ -1,5 +1,4 @@
 import PDFDocument from 'pdfkit';
-import QRCode from 'qrcode';
 import { logger } from '../utils/logger';
 import path from 'path';
 import fs from 'fs';
@@ -156,20 +155,7 @@ class PDFService {
           doc.fontSize(9).text(data.applicableGovtResolutions, leftMargin, 598, { width: fieldWidth });
         }
 
-        // QR Code - positioned exactly on "SCAN ME" area in template
-        if (data.certHash) {
-          const qrData = `${process.env.QR_BASE_URL || 'http://localhost:3000'}/static/validation.html?hash=${data.certHash}`;
-          const qrCodeDataUrl = await QRCode.toDataURL(qrData, {
-            errorCorrectionLevel: 'H',
-            type: 'image/png',
-            width: 100,
-            margin: 1,
-          });
-
-          const qrCodeBuffer = Buffer.from(qrCodeDataUrl.split(',')[1], 'base64');
-          // Position QR code exactly on "SCAN ME" area in template
-          doc.image(qrCodeBuffer, 85, 690, { width: 75, height: 75 });
-        }
+        // QR Code removed as per requirements
 
         // Digital signature indicator - moved 5px up and positioned at bottom
         if (data.digitalSignature) {

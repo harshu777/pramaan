@@ -47,15 +47,15 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
 
   // Auto-map existing competition records to this athlete
   try {
-    // Find and link records based on name, DOB, and phone
+    // Find and link records based on name, DOB, and phone (case-insensitive)
     const mappingResult = await query(`
       UPDATE athlete_competitions
       SET athlete_id = ?
       WHERE athlete_id IS NULL
         AND (
-          full_name = ?
-          OR (full_name LIKE ? AND (dob = ? OR dob IS NULL))
-          OR (full_name = ? AND dob = ?)
+          LOWER(full_name) = LOWER(?)
+          OR (LOWER(full_name) LIKE LOWER(?) AND (dob = ? OR dob IS NULL))
+          OR (LOWER(full_name) = LOWER(?) AND dob = ?)
         )
     `, [athleteId, fullName, `%${fullName}%`, dob, fullName, dob]);
 
@@ -369,14 +369,16 @@ router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: R
 
   const athlete = athleteResult.rows[0];
 
-  // Get all competition records that match this athlete (by name, DOB, phone, or linked athlete_id)
+  // Get all competition records that match this athlete (by name, DOB, phone, or linked athlete_id) - case-insensitive
   const result = await query(`
-    SELECT * FROM athlete_competitions
-    WHERE athlete_id = ?
-       OR (full_name = ? AND (dob = ? OR dob IS NULL))
-       OR (aadhar_number = ? AND aadhar_number IS NOT NULL)
-    ORDER BY created_at DESC
-  `, [user.id, athlete.full_name, athlete.dob, athlete.aadhar_number]);
+    SELECT ac.*, qcr.certificate_hash
+    FROM athlete_competitions ac
+    LEFT JOIN quota_certificate_requests qcr ON ac.id = qcr.competition_record_id AND qcr.athlete_id = ? AND qcr.status = 'approved'
+    WHERE ac.athlete_id = ?
+       OR (LOWER(ac.full_name) = LOWER(?) AND (ac.dob = ? OR ac.dob IS NULL))
+       OR (ac.aadhar_number = ? AND ac.aadhar_number IS NOT NULL)
+    ORDER BY ac.created_at DESC
+  `, [user.id, user.id, athlete.full_name, athlete.dob, athlete.aadhar_number]);
 
   const records = result.rows.map((row: any) => ({
     id: row.id,
@@ -398,6 +400,7 @@ router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: R
     applicableGovtResolutions: row.applicable_govt_resolutions,
     certificateIssued: row.certificate_issued,
     certificateRequested: row.certificate_requested,
+    certificateHash: row.certificate_hash, // Include hash directly
     createdAt: row.created_at
   }));
 
@@ -741,6 +744,61 @@ router.get('/my-appeals', authenticate, asyncHandler(async (req: Request, res: R
     success: true,
     appeals,
     count: appeals.length
+  });
+}));
+
+// Get certificate hash for a competition record (for downloading)
+router.get('/record-certificate/:recordId', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { recordId } = req.params;
+
+  if (user.type !== 'athlete') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied'
+    });
+  }
+
+  // Check if record exists and belongs to this athlete
+  const recordResult = await query(
+    'SELECT * FROM athlete_competitions WHERE id = ? AND athlete_id = ?',
+    [recordId, user.id]
+  );
+
+  if (recordResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Record not found or does not belong to you'
+    });
+  }
+
+  const record = recordResult.rows[0];
+
+  if (!record.certificate_issued) {
+    return res.status(400).json({
+      success: false,
+      message: 'Certificate has not been issued for this record'
+    });
+  }
+
+  // Get certificate hash from the request
+  const certRequestResult = await query(
+    'SELECT certificate_hash FROM quota_certificate_requests WHERE competition_record_id = ? AND athlete_id = ? AND status = ?',
+    [recordId, user.id, 'approved']
+  );
+
+  if (certRequestResult.rows.length === 0) {
+    return res.status(404).json({
+      success: false,
+      message: 'Certificate not found'
+    });
+  }
+
+  const certHash = certRequestResult.rows[0].certificate_hash;
+
+  res.json({
+    success: true,
+    certificateHash: certHash
   });
 }));
 

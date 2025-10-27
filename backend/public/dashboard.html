@@ -536,6 +536,9 @@
                     <li onclick="showCertificateRequests()">
                         📝 Certificate Requests
                     </li>
+                    <li onclick="showBulkUploadedRecords()">
+                        📊 Bulk Upload Records
+                    </li>
                     <li onclick="showAppealsManagement()">
                         ⚖️ Appeals Management
                     </li>
@@ -746,11 +749,42 @@
 
         // Load Certificates
         function loadCertificates() {
-            fetch('/api/certificates/search?q=')
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No token found');
+                return;
+            }
+
+            // Fetch claimed/issued certificates from admin endpoint
+            fetch('/api/admin/certificate-requests?status=approved', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        certificates = data.data;
+                        // Convert admin certificate requests to certificate format
+                        certificates = data.requests.map(req => ({
+                            id: req.id,
+                            cert_hash: req.certificateHash,
+                            subject_name: req.competitionData?.fullName || req.athleteName,
+                            issuer_name: 'Sports and Youth Services, Maharashtra State',
+                            certificate_type: 'Sports Achievement',
+                            issued_date: req.processedAt || req.requestedAt,
+                            expiry_date: null,
+                            status: 'active',
+                            metadata: {
+                                athleteName: req.athleteName,
+                                athleteEmail: req.athleteEmail,
+                                athletePhone: req.athletePhone,
+                                gameName: req.competitionData?.gameName,
+                                competitionName: req.competitionData?.competitionName,
+                                positionObtained: req.competitionData?.positionObtained,
+                                district: req.competitionData?.district,
+                                certificateNo: req.competitionData?.certificateNo
+                            }
+                        }));
                         updateStats();
                         displayCertificates();
                     }
@@ -2207,6 +2241,162 @@
             `;
 
             document.body.insertAdjacentHTML('beforeend', detailsHTML);
+        }
+
+        // Delete bulk upload record
+        async function deleteBulkRecord(recordId, recordName) {
+            if (!confirm(`Are you sure you want to delete the record for "${recordName}"?\n\nThis action cannot be undone.`)) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/bulk-uploaded-records/${recordId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Record deleted successfully');
+                    // Close the modal and reopen to refresh the list
+                    document.getElementById('bulkRecordsModalOverlay').remove();
+                    showBulkUploadedRecords();
+                } else {
+                    alert('Error deleting record: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error deleting record: ' + error.message);
+            }
+        }
+
+        // Show Bulk Uploaded Records (NEW FEATURE)
+        async function showBulkUploadedRecords() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/bulk-uploaded-records?includeAll=true`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                const result = await response.json();
+                const records = result.records || [];
+                const unclaimedCount = result.unclaimedCount || 0;
+                const claimedCount = result.claimedCount || 0;
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="bulkRecordsModalOverlay" onclick="if(event.target.id==='bulkRecordsModalOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:1400px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">📊 Bulk Upload Records</h2>
+                                <button onclick="document.getElementById('bulkRecordsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px;">
+                                <div style="background:#f8f9fa;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#333;">${records.length}</div>
+                                    <div style="color:#666;font-size:14px;">Total Records</div>
+                                </div>
+                                <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#856404;">${unclaimedCount}</div>
+                                    <div style="color:#666;font-size:14px;">Unclaimed</div>
+                                </div>
+                                <div style="background:#d1e7dd;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#0f5132;">${claimedCount}</div>
+                                    <div style="color:#666;font-size:14px;">Claimed</div>
+                                </div>
+                                <div style="background:#cfe2ff;padding:15px;border-radius:8px;text-align:center;">
+                                    <div style="font-size:28px;font-weight:bold;color:#084298;">${records.filter(r => r.certificateIssued).length}</div>
+                                    <div style="color:#666;font-size:14px;">Certificates Issued</div>
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom:20px;padding:15px;background:#e7f3ff;border-left:4px solid #004085;border-radius:5px;">
+                                <strong>ℹ️ Info:</strong> These records were uploaded via bulk upload. Athletes can claim them by registering with matching details.
+                            </div>
+
+                            <div style="overflow-x:auto;">
+                                <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+                                    <thead>
+                                        <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Name</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">DOB</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Game</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Competition</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Position</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Cert No</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Status</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Linked Athlete</th>
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="bulkRecordsTableBody">
+                `;
+
+                if (records.length === 0) {
+                    modalHTML += '<tr><td colspan="9" style="padding:30px;text-align:center;color:#999;">No bulk upload records found</td></tr>';
+                } else {
+                    records.forEach(record => {
+                        const statusLabel = record.certificateIssued ? 'Issued' : record.certificateRequested ? 'Requested' : 'Pending';
+                        const statusColor = record.certificateIssued ? '#d1e7dd' : record.certificateRequested ? '#fff3cd' : '#f8d7da';
+
+                        modalHTML += `
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:10px;">${record.fullName}</td>
+                                <td style="padding:10px;">${record.dob || 'N/A'}</td>
+                                <td style="padding:10px;">${record.gameName || 'N/A'}</td>
+                                <td style="padding:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${record.competitionName || 'N/A'}">${record.competitionName || 'N/A'}</td>
+                                <td style="padding:10px;">${record.positionObtained || 'N/A'}</td>
+                                <td style="padding:10px;">${record.certificateNo || 'N/A'}</td>
+                                <td style="padding:10px;">
+                                    <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${statusLabel}</span>
+                                </td>
+                                <td style="padding:10px;">
+                                    ${record.linkedAthlete ? `
+                                        <div style="font-size:0.85em;">
+                                            <div>${record.linkedAthlete.name}</div>
+                                            <div style="color:#666;font-size:0.9em;">${record.linkedAthlete.email}</div>
+                                        </div>
+                                    ` : '<span style="color:#999;">Unclaimed</span>'}
+                                </td>
+                                <td style="padding:10px;">
+                                    ${!record.athleteId && !record.certificateIssued ? `
+                                        <button onclick="deleteBulkRecord('${record.id}', '${record.fullName}')" style="padding:5px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">
+                                            Delete
+                                        </button>
+                                    ` : '<span style="color:#999;font-size:0.85em;">-</span>'}
+                                </td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                modalHTML += `
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            } catch (error) {
+                alert('Error loading bulk upload records: ' + error.message);
+            }
         }
     </script>
 </body>

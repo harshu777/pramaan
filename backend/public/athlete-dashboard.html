@@ -642,17 +642,13 @@
                     <button class="btn btn-view" onclick="viewCompetitionRecord('${record.id}')">
                         View Details
                     </button>
-                    ${record.certificateIssued ? `
-                        <button class="btn btn-download" onclick="downloadIssuedCertificate('${record.id}')">
+                    ${record.certificateIssued && record.certificateHash ? `
+                        <button class="btn btn-download" onclick="downloadCertificateDirect('${record.certificateHash}')">
                             Download Certificate
                         </button>
-                    ` : record.certificateRequested ? `
-                        <button class="btn" style="background: #ffc107; color: #333;" disabled>
-                            Request Pending
-                        </button>
                     ` : `
-                        <button class="btn" style="background: #28a745; color: white;" onclick="requestCertificate('${record.id}')">
-                            Request Certificate
+                        <button class="btn" style="background: #28a745; color: white;" onclick="generateAndDownloadCertificate('${record.id}')">
+                            Generate & Download
                         </button>
                     `}
                 </div>
@@ -1026,16 +1022,16 @@
             document.getElementById('certificateModal').style.display = 'block';
         }
 
-        // Request certificate for a competition record
-        async function requestCertificate(recordId) {
-            if (!confirm('Are you sure you want to request a certificate for this competition record?')) {
+        // Generate and download certificate immediately
+        async function generateAndDownloadCertificate(recordId) {
+            if (!confirm('Generate and download your certificate now?')) {
                 return;
             }
 
             const token = localStorage.getItem('athleteToken');
 
             try {
-                showMessage('Submitting certificate request...', 'info');
+                showMessage('Generating certificate...', 'info');
 
                 const response = await fetch(`${API_BASE}/athletes/request-certificate/${recordId}`, {
                     method: 'POST',
@@ -1048,20 +1044,32 @@
                 const result = await response.json();
 
                 if (!response.ok) {
-                    throw new Error(result.message || 'Failed to request certificate');
+                    throw new Error(result.message || 'Failed to generate certificate');
                 }
 
-                showMessage('Certificate request submitted successfully! The admin will review and approve your request.', 'success');
+                showMessage('Certificate generated successfully! Downloading...', 'success');
+
+                // Immediately download the certificate using the returned hash
+                const certHash = result.certificateHash;
+                if (certHash) {
+                    await downloadCertificateDirect(certHash);
+                }
 
                 // Reload records to show updated status
                 setTimeout(() => {
                     loadCertificates();
-                }, 1500);
+                }, 1000);
 
             } catch (error) {
-                console.error('Error requesting certificate:', error);
-                showMessage(error.message || 'Failed to request certificate', 'error');
+                console.error('Error generating certificate:', error);
+                showMessage(error.message || 'Failed to generate certificate', 'error');
             }
+        }
+
+        // Legacy function - kept for compatibility
+        async function requestCertificate(recordId) {
+            // Redirect to the new generate and download function
+            await generateAndDownloadCertificate(recordId);
         }
 
         // Show issued certificates (original functionality)
@@ -1236,12 +1244,77 @@
             }
         }
 
-        // Download issued certificate (placeholder)
-        function downloadIssuedCertificate(recordId) {
-            showMessage('Downloading certificate...', 'info');
-            // This would need to fetch the certificate hash associated with this record
-            // For now, just show a message
-            showMessage('Certificate download feature - Implementation pending', 'info');
+        // Download certificate directly using hash (new simpler method)
+        async function downloadCertificateDirect(certHash) {
+            try {
+                showMessage('Downloading certificate...', 'info');
+
+                // Download the certificate using the hash
+                const downloadResponse = await fetch(`${API_BASE}/certificates/download/${certHash}`);
+
+                if (!downloadResponse.ok) {
+                    throw new Error('Failed to download certificate');
+                }
+
+                const blob = await downloadResponse.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `certificate-${certHash.substring(0, 8)}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showMessage('Certificate downloaded successfully', 'success');
+            } catch (error) {
+                console.error('Error downloading certificate:', error);
+                showMessage(error.message || 'Failed to download certificate', 'error');
+            }
+        }
+
+        // Download issued certificate (fallback method using record ID)
+        async function downloadIssuedCertificate(recordId) {
+            const token = localStorage.getItem('athleteToken');
+
+            try {
+                showMessage('Downloading certificate...', 'info');
+
+                // First, get the certificate hash for this record
+                const hashResponse = await fetch(`${API_BASE}/athletes/record-certificate/${recordId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Check if response is JSON
+                const contentType = hashResponse.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    if (hashResponse.status === 401) {
+                        showMessage('Session expired. Please login again.', 'error');
+                        setTimeout(() => handleLogout(), 2000);
+                        return;
+                    }
+                    throw new Error('Unexpected response from server. Please try again.');
+                }
+
+                const hashResult = await hashResponse.json();
+
+                if (!hashResponse.ok) {
+                    throw new Error(hashResult.message || 'Failed to get certificate');
+                }
+
+                const certHash = hashResult.certificateHash;
+
+                // Use the direct download method
+                await downloadCertificateDirect(certHash);
+
+            } catch (error) {
+                console.error('Error downloading certificate:', error);
+                showMessage(error.message || 'Failed to download certificate', 'error');
+            }
         }
 
         // APPEAL FUNCTIONS
