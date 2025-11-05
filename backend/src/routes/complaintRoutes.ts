@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../config/database-sqlite';
 import { logger } from '../utils/logger';
+import { generateTicketId } from '../utils/ticketGenerator';
 import { asyncHandler } from '../middleware/asyncHandler';
 import multer from 'multer';
 import path from 'path';
@@ -65,7 +66,7 @@ router.post('/create', upload.array('documents', 5), asyncHandler(async (req: Re
   }
 
   // Validate complaint type
-  const validTypes = ['incorrect_info', 'fraudulent', 'unauthorized', 'technical', 'other'];
+  const validTypes = ['incorrect_info', 'fraudulent', 'unauthorized', 'technical', 'missing_certificate', 'other'];
   if (!validTypes.includes(type)) {
     return res.status(400).json({
       success: false,
@@ -74,20 +75,40 @@ router.post('/create', upload.array('documents', 5), asyncHandler(async (req: Re
   }
 
   try {
-    // Check if certificate exists
-    const certResult = await query(
-      'SELECT id FROM certificates WHERE cert_hash = ?',
-      [certHash]
-    );
+    // Check if this is a competition record complaint (format: record-{id}) or certificate complaint
+    const isRecordComplaint = certHash.startsWith('record-');
 
-    if (!certResult.rows || certResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Certificate not found'
-      });
+    if (!isRecordComplaint) {
+      // For certificate complaints, verify certificate exists
+      const certResult = await query(
+        'SELECT id FROM certificates WHERE cert_hash = ?',
+        [certHash]
+      );
+
+      if (!certResult.rows || certResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Certificate not found'
+        });
+      }
+    } else {
+      // For record complaints, verify the competition record exists
+      const recordId = certHash.replace('record-', '');
+      const recordResult = await query(
+        'SELECT id FROM competition_records WHERE id = ?',
+        [recordId]
+      );
+
+      if (!recordResult.rows || recordResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Competition record not found'
+        });
+      }
     }
 
     const complaintId = uuidv4();
+    const ticketId = await generateTicketId();
 
     // Handle uploaded files
     const uploadedFiles = req.files as Express.Multer.File[];
@@ -105,19 +126,20 @@ router.post('/create', upload.array('documents', 5), asyncHandler(async (req: Re
       supportingDocuments = JSON.stringify(filePaths);
     }
 
-    // Insert complaint with supporting documents
+    // Insert complaint with supporting documents and ticket ID
     await query(
-      `INSERT INTO complaints (id, cert_hash, name, email, type, description, supporting_documents, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [complaintId, certHash, name, email, type, description, supportingDocuments]
+      `INSERT INTO complaints (id, ticket_id, cert_hash, name, email, type, description, supporting_documents, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [complaintId, ticketId, certHash, name, email, type, description, supportingDocuments]
     );
 
-    logger.info(`Complaint created: ${complaintId} for certificate ${certHash} with ${uploadedFiles?.length || 0} documents`);
+    logger.info(`Complaint created: ${complaintId} (Ticket: ${ticketId}) for certificate ${certHash} with ${uploadedFiles?.length || 0} documents`);
 
     res.status(201).json({
       success: true,
       message: 'Complaint submitted successfully',
       complaintId,
+      ticketId,
       documentsUploaded: uploadedFiles?.length || 0
     });
   } catch (error) {
@@ -137,6 +159,7 @@ router.get('/all', asyncHandler(async (req: Request, res: Response) => {
     let queryText = `
       SELECT
         c.id,
+        c.ticket_id,
         c.cert_hash,
         c.name,
         c.email,
@@ -300,6 +323,43 @@ router.get('/certificate/:certHash', asyncHandler(async (req: Request, res: Resp
     res.status(500).json({
       success: false,
       message: 'Failed to fetch complaints'
+    });
+  }
+}));
+
+// Get complaint by ticket ID
+router.get('/ticket/:ticketId', asyncHandler(async (req: Request, res: Response) => {
+  const { ticketId } = req.params;
+
+  try {
+    const result = await query(
+      `SELECT
+        c.*,
+        cert.subject_name,
+        cert.certificate_type,
+        cert.issuer_name
+      FROM complaints c
+      LEFT JOIN certificates cert ON c.cert_hash = cert.cert_hash
+      WHERE c.ticket_id = ?`,
+      [ticketId]
+    );
+
+    if (!result.rows || result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Complaint not found with this ticket ID'
+      });
+    }
+
+    res.json({
+      success: true,
+      complaint: result.rows[0]
+    });
+  } catch (error) {
+    logger.error('Error fetching complaint by ticket ID:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch complaint'
     });
   }
 }));

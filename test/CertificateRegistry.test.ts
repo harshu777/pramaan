@@ -87,7 +87,7 @@ describe("CertificateRegistry", function () {
       const certificate = await certificateRegistry.getCertificate(certHash);
       expect(certificate.ipfsCid).to.equal(ipfsCid);
       expect(certificate.issuer).to.equal(issuer1.address);
-      expect(certificate.isRevoked).to.be.false;
+      expect(certificate.isCancelled).to.be.false;
     });
 
     it("Should prevent non-authorized issuer from issuing certificates", async function () {
@@ -123,8 +123,8 @@ describe("CertificateRegistry", function () {
     });
   });
 
-  describe("Certificate Revocation", function () {
-    it("Should allow issuer to revoke their certificate", async function () {
+  describe("Certificate Cancellation", function () {
+    it("Should allow issuer to cancel their certificate", async function () {
       const { certificateRegistry, owner, issuer1 } = await loadFixture(deployCertificateRegistryFixture);
 
       await certificateRegistry.authorizeIssuer(
@@ -139,14 +139,14 @@ describe("CertificateRegistry", function () {
       await certificateRegistry.connect(issuer1).issueCertificate(certHash, ipfsCid, 0);
 
       await expect(
-        certificateRegistry.connect(issuer1).revokeCertificate(certHash, "Test revocation")
-      ).to.emit(certificateRegistry, "CertificateRevoked");
+        certificateRegistry.connect(issuer1).cancelCertificate(certHash, "Test cancellation")
+      ).to.emit(certificateRegistry, "CertificateCancelled");
 
       const certificate = await certificateRegistry.getCertificate(certHash);
-      expect(certificate.isRevoked).to.be.true;
+      expect(certificate.isCancelled).to.be.true;
     });
 
-    it("Should allow owner to revoke any certificate", async function () {
+    it("Should allow owner to cancel any certificate", async function () {
       const { certificateRegistry, owner, issuer1 } = await loadFixture(deployCertificateRegistryFixture);
 
       await certificateRegistry.authorizeIssuer(
@@ -161,11 +161,11 @@ describe("CertificateRegistry", function () {
       await certificateRegistry.connect(issuer1).issueCertificate(certHash, ipfsCid, 0);
 
       await expect(
-        certificateRegistry.revokeCertificate(certHash, "Admin revocation")
-      ).to.emit(certificateRegistry, "CertificateRevoked");
+        certificateRegistry.cancelCertificate(certHash, "Admin cancellation")
+      ).to.emit(certificateRegistry, "CertificateCancelled");
     });
 
-    it("Should prevent others from revoking certificates", async function () {
+    it("Should prevent others from cancelling certificates", async function () {
       const { certificateRegistry, owner, issuer1, otherAccount } = await loadFixture(deployCertificateRegistryFixture);
 
       await certificateRegistry.authorizeIssuer(
@@ -180,8 +180,8 @@ describe("CertificateRegistry", function () {
       await certificateRegistry.connect(issuer1).issueCertificate(certHash, ipfsCid, 0);
 
       await expect(
-        certificateRegistry.connect(otherAccount).revokeCertificate(certHash, "Unauthorized revocation")
-      ).to.be.revertedWith("Only issuer or owner can revoke");
+        certificateRegistry.connect(otherAccount).cancelCertificate(certHash, "Unauthorized cancellation")
+      ).to.be.revertedWith("Only issuer or owner can cancel");
     });
   });
 
@@ -207,7 +207,7 @@ describe("CertificateRegistry", function () {
       expect(verification.ipfsCid).to.equal(ipfsCid);
       expect(verification.issuer).to.equal(issuer1.address);
       expect(verification.isExpired).to.be.false;
-      expect(verification.isRevoked).to.be.false;
+      expect(verification.isCancelled).to.be.false;
     });
 
     it("Should detect expired certificate", async function () {
@@ -231,7 +231,7 @@ describe("CertificateRegistry", function () {
       expect(verification.isExpired).to.be.true;
     });
 
-    it("Should detect revoked certificate", async function () {
+    it("Should detect cancelled certificate", async function () {
       const { certificateRegistry, owner, issuer1 } = await loadFixture(deployCertificateRegistryFixture);
 
       await certificateRegistry.authorizeIssuer(
@@ -244,12 +244,12 @@ describe("CertificateRegistry", function () {
       const ipfsCid = "QmTest123";
 
       await certificateRegistry.connect(issuer1).issueCertificate(certHash, ipfsCid, 0);
-      await certificateRegistry.connect(issuer1).revokeCertificate(certHash, "Test");
+      await certificateRegistry.connect(issuer1).cancelCertificate(certHash, "Test");
 
       const verification = await certificateRegistry.verifyCertificate(certHash);
 
       expect(verification.isValid).to.be.false;
-      expect(verification.isRevoked).to.be.true;
+      expect(verification.isCancelled).to.be.true;
     });
   });
 

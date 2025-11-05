@@ -253,8 +253,8 @@ class CertificateService {
       }
 
       const isExpired = certificate.expiry_date && new Date(certificate.expiry_date) < new Date();
-      const isRevoked = certificate.status === 'revoked';
-      const isValid = !isExpired && !isRevoked && certificate.status === 'active';
+      const isCancelled = certificate.status === 'cancelled';
+      const isValid = !isExpired && !isCancelled && certificate.status === 'active';
 
       // Parse metadata if it's a JSON string
       let parsedMetadata = certificate.metadata;
@@ -281,7 +281,7 @@ class CertificateService {
         ipfsCid: certificate.ipfs_cid,
         blockchainTxHash: certificate.blockchain_tx_hash,
         isExpired,
-        isRevoked,
+        isCancelled,
         blockchainVerified: !!blockchainData?.isValid,
         ipfsVerified: !!ipfsData,
         digitalSignatureVerified: signatureVerified,
@@ -300,45 +300,64 @@ class CertificateService {
     }
   }
 
-  async revokeCertificate(certHash: string, reason: string, revokedBy: string): Promise<void> {
+  async cancelCertificate(certHash: string, reason: string, cancelledBy: string): Promise<void> {
     try {
-      const updateQuery = `
-        UPDATE certificates
-        SET status = 'revoked', updated_at = datetime('now')
-        WHERE cert_hash = ?
-      `;
+      // Validate inputs
+      if (!certHash || certHash.trim() === '') {
+        throw new Error('Certificate hash is required');
+      }
 
-      // First get the certificate ID
-      const selectResult = await query('SELECT id FROM certificates WHERE cert_hash = ?', [certHash]);
+      if (!reason || reason.trim() === '') {
+        throw new Error('Cancellation reason is required');
+      }
 
-      if (selectResult.rows.length === 0) {
+      // First get the certificate ID and check current status
+      const selectResult = await query('SELECT id, status FROM certificates WHERE cert_hash = ?', [certHash]);
+
+      if (!selectResult.rows || selectResult.rows.length === 0) {
         throw new Error('Certificate not found');
       }
 
-      const certificateId = selectResult.rows[0].id;
+      const certificate = selectResult.rows[0];
 
-      // Then update it
-      await query(updateQuery, [certHash]);
-
-      await query(
-        'INSERT INTO revocation_logs (id, certificate_id, revoked_by, revocation_reason) VALUES (?, ?, ?, ?)',
-        [uuidv4(), certificateId, revokedBy, reason]
-      );
-
-      try {
-        const txHash = await blockchainService.revokeCertificate(certHash, reason);
-        await query(
-          'UPDATE revocation_logs SET blockchain_tx_hash = ? WHERE certificate_id = ?',
-          [txHash, certificateId]
-        );
-      } catch (blockchainError) {
-        logger.error('Blockchain revocation failed:', blockchainError);
+      if (certificate.status === 'cancelled') {
+        throw new Error('Certificate is already cancelled');
       }
 
-      logger.info(`Certificate revoked: ${certHash}`);
+      const certificateId = certificate.id;
+
+      // Update certificate status
+      const updateQuery = `
+        UPDATE certificates
+        SET status = 'cancelled', updated_at = datetime('now')
+        WHERE cert_hash = ?
+      `;
+      await query(updateQuery, [certHash]);
+
+      // Log cancellation
+      await query(
+        'INSERT INTO cancellation_logs (id, certificate_id, cancelled_by, cancellation_reason) VALUES (?, ?, ?, ?)',
+        [uuidv4(), certificateId, cancelledBy, reason]
+      );
+
+      // Try to cancel on blockchain (optional, don't fail if this fails)
+      try {
+        const txHash = await blockchainService.cancelCertificate(certHash, reason);
+        await query(
+          'UPDATE cancellation_logs SET blockchain_tx_hash = ? WHERE certificate_id = ?',
+          [txHash, certificateId]
+        );
+        logger.info(`Certificate cancelled on blockchain: ${txHash}`);
+      } catch (blockchainError) {
+        logger.error('Blockchain cancellation failed (certificate still cancelled in database):', blockchainError);
+        // Don't throw - certificate is cancelled in database which is primary source of truth
+      }
+
+      logger.info(`Certificate cancelled: ${certHash} by ${cancelledBy}`);
     } catch (error) {
-      logger.error('Certificate revocation failed:', error);
-      throw new Error('Failed to revoke certificate');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Certificate cancellation failed:', error);
+      throw new Error(`Failed to cancel certificate: ${errorMessage}`);
     }
   }
 

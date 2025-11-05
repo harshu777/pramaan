@@ -49,21 +49,21 @@ class BlockchainService {
     }
   }
 
-  async revokeCertificate(certHash: string, reason: string): Promise<string> {
+  async cancelCertificate(certHash: string, reason: string): Promise<string> {
     try {
       if (!this.contract) {
         throw new Error('Contract not configured');
       }
 
       const certHashBytes = ethers.id(certHash);
-      const tx = await this.contract.revokeCertificate(certHashBytes, reason);
+      const tx = await this.contract.cancelCertificate(certHashBytes, reason);
       const receipt = await tx.wait();
 
-      logger.info(`Certificate revoked on blockchain: ${receipt.hash}`);
+      logger.info(`Certificate cancelled on blockchain: ${receipt.hash}`);
       return receipt.hash;
     } catch (error) {
-      logger.error('Blockchain revoke error:', error);
-      throw new Error('Failed to revoke certificate on blockchain');
+      logger.error('Blockchain cancel error:', error);
+      throw new Error('Failed to cancel certificate on blockchain');
     }
   }
 
@@ -73,7 +73,7 @@ class BlockchainService {
     issuer: string;
     issuedAt: number;
     isExpired: boolean;
-    isRevoked: boolean;
+    isCancelled: boolean;
   }> {
     try {
       if (!this.contract) {
@@ -89,7 +89,7 @@ class BlockchainService {
         issuer: result.issuer,
         issuedAt: Number(result.issuedAt),
         isExpired: result.isExpired,
-        isRevoked: result.isRevoked,
+        isCancelled: result.isCancelled,
       };
     } catch (error) {
       logger.error('Blockchain verify error:', error);
@@ -112,7 +112,7 @@ class BlockchainService {
         issuer: cert.issuer,
         issuedAt: Number(cert.issuedAt),
         expiryDate: Number(cert.expiryDate),
-        isRevoked: cert.isRevoked,
+        isCancelled: cert.isCancelled,
         issuerDid: cert.issuerDid,
       };
     } catch (error) {

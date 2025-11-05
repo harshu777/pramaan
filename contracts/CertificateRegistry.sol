@@ -13,7 +13,7 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
         address issuer;
         uint256 issuedAt;
         uint256 expiryDate;
-        bool isRevoked;
+        bool isCancelled;
         string issuerDid;
     }
 
@@ -28,7 +28,7 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
     mapping(bytes32 => Certificate) public certificates;
     mapping(address => Issuer) public issuers;
     mapping(bytes32 => bool) public certificateExists;
-    mapping(bytes32 => string) public revocationReasons;
+    mapping(bytes32 => string) public cancellationReasons;
 
     // Arrays for enumeration
     bytes32[] public certificateHashes;
@@ -44,11 +44,11 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
         uint256 expiryDate
     );
 
-    event CertificateRevoked(
+    event CertificateCancelled(
         bytes32 indexed certHash,
-        address indexed revokedBy,
+        address indexed cancelledBy,
         string reason,
-        uint256 revokedAt
+        uint256 cancelledAt
     );
 
     event IssuerAuthorized(
@@ -101,7 +101,7 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
             issuer: msg.sender,
             issuedAt: block.timestamp,
             expiryDate: _expiryDate,
-            isRevoked: false,
+            isCancelled: false,
             issuerDid: issuers[msg.sender].did
         });
 
@@ -121,27 +121,27 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
     }
 
     /**
-     * @dev Revoke a certificate
-     * @param _certHash Hash of the certificate to revoke
-     * @param _reason Reason for revocation
+     * @dev Cancel a certificate
+     * @param _certHash Hash of the certificate to cancel
+     * @param _reason Reason for cancellation
      */
-    function revokeCertificate(
+    function cancelCertificate(
         bytes32 _certHash,
         string memory _reason
     ) external certificateMustExist(_certHash) whenNotPaused {
         Certificate storage cert = certificates[_certHash];
 
-        // Only issuer or owner can revoke
+        // Only issuer or owner can cancel
         require(
             msg.sender == cert.issuer || msg.sender == owner(),
-            "Only issuer or owner can revoke"
+            "Only issuer or owner can cancel"
         );
-        require(!cert.isRevoked, "Certificate already revoked");
+        require(!cert.isCancelled, "Certificate already cancelled");
 
-        cert.isRevoked = true;
-        revocationReasons[_certHash] = _reason;
+        cert.isCancelled = true;
+        cancellationReasons[_certHash] = _reason;
 
-        emit CertificateRevoked(_certHash, msg.sender, _reason, block.timestamp);
+        emit CertificateCancelled(_certHash, msg.sender, _reason, block.timestamp);
     }
 
     /**
@@ -152,7 +152,7 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
      * @return issuer Address of the issuer
      * @return issuedAt Timestamp when issued
      * @return isExpired Whether the certificate has expired
-     * @return isRevoked Whether the certificate is revoked
+     * @return isCancelled Whether the certificate is cancelled
      */
     function verifyCertificate(bytes32 _certHash)
         external
@@ -164,13 +164,13 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
             address issuer,
             uint256 issuedAt,
             bool isExpired,
-            bool isRevoked
+            bool isCancelled
         )
     {
         Certificate memory cert = certificates[_certHash];
 
         isExpired = cert.expiryDate > 0 && cert.expiryDate < block.timestamp;
-        isValid = !cert.isRevoked && !isExpired;
+        isValid = !cert.isCancelled && !isExpired;
 
         return (
             isValid,
@@ -178,7 +178,7 @@ contract CertificateRegistry is Ownable, Pausable, ReentrancyGuard {
             cert.issuer,
             cert.issuedAt,
             isExpired,
-            cert.isRevoked
+            cert.isCancelled
         );
     }
 

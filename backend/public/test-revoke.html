@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Revoke Modal</title>
+    <style>
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Revoke Modal</h1>
+    <button onclick="testRevoke()">Click to Test Revoke Modal</button>
+
+    <div class="modal" id="revokeModal">
+        <div class="modal-content">
+            <h2>Revoke Certificate</h2>
+            <form id="revokeForm">
+                <textarea id="revocationReason" placeholder="Enter reason..." rows="4" style="width: 100%;"></textarea>
+                <button type="submit">Submit</button>
+                <button type="button" onclick="closeModal('revokeModal')">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let certificateToRevoke = null;
+
+        function testRevoke() {
+            console.log('Test revoke clicked');
+            certificateToRevoke = '31e7e1745be146964277db46be80392e97e2e27406bafdcfda9b7de8b4229ad3';
+            showModal('revokeModal');
+            console.log('Modal should be visible now');
+        }
+
+        function showModal(modalId) {
+            console.log('showModal called for:', modalId);
+            const modal = document.getElementById(modalId);
+            console.log('Modal element:', modal);
+            modal.classList.add('active');
+            console.log('Active class added, classList:', modal.classList);
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        document.getElementById('revokeForm').onsubmit = async function(e) {
+            e.preventDefault();
+            const reason = document.getElementById('revocationReason').value;
+            console.log('Form submitted with reason:', reason);
+            console.log('Certificate hash:', certificateToRevoke);
+
+            const token = localStorage.getItem('token');
+            console.log('Token:', token ? 'exists' : 'missing');
+
+            if (!token) {
+                alert('No token found. Please login first at /static/login.html');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/certificates/revoke/${certificateToRevoke}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ reason })
+                });
+
+                console.log('Response status:', response.status);
+                const result = await response.json();
+                console.log('Response:', result);
+
+                if (result.success) {
+                    alert('Certificate revoked successfully!');
+                    closeModal('revokeModal');
+                } else {
+                    alert('Failed: ' + (result.message || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to revoke certificate: ' + error.message);
+            }
+        };
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Management Dashboard</title>
+    <title>E-Pramaan Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -126,7 +126,7 @@
         }
 
         .folder-list li.active {
-            background: #4CAF50;
+            background: #ff6b9d;
             color: white;
         }
 
@@ -181,15 +181,42 @@
 
         .search-box {
             flex: 1;
-            max-width: 400px;
+            max-width: 500px;
             position: relative;
         }
 
         .search-box input {
             width: 100%;
             padding: 10px;
+            padding-right: 100px;
             border: 1px solid #ddd;
             border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: #ff6b9d;
+            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+        }
+
+        .search-box button {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 8px 20px;
+            background: #ff6b9d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        .search-box button:hover {
+            background: #c44569;
         }
 
         .action-buttons {
@@ -209,12 +236,12 @@
         }
 
         .btn-primary {
-            background: #4CAF50;
+            background: #ff6b9d;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #45a049;
+            background: #c44569;
         }
 
         .btn-secondary {
@@ -260,7 +287,7 @@
         }
 
         .certificate-card.selected {
-            border-color: #4CAF50;
+            border-color: #ff6b9d;
             background: #f0fdf4;
         }
 
@@ -299,7 +326,7 @@
             color: #856404;
         }
 
-        .status-revoked {
+        .status-cancelled {
             background: #f8d7da;
             color: #721c24;
         }
@@ -415,7 +442,7 @@
 
         .move-option.selected {
             background: #e8f5e9;
-            border-color: #4CAF50;
+            border-color: #ff6b9d;
         }
 
         /* Toast */
@@ -458,7 +485,7 @@
         }
 
         .file-upload-area:hover {
-            border-color: #4CAF50;
+            border-color: #ff6b9d;
             background: #f9f9f9;
         }
 
@@ -492,14 +519,17 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="logo">📜 Certificate Management System</div>
+        <div class="logo">📜 E-Pramaan</div>
         <div class="header-right">
-            <a href="/static/bulk-upload.html" class="btn btn-primary">Bulk Upload</a>
+            <a href="/static/bulk-upload.html" class="btn btn-primary" id="bulkUploadBtn">Bulk Upload</a>
             <div class="user-menu">
                 <button class="user-btn" onclick="toggleDropdown()">
-                    Admin ▼
+                    <span id="headerUserName">Admin</span> ▼
                 </button>
                 <div class="dropdown" id="userDropdown">
+                    <a href="#" style="cursor: default; color: #999; font-size: 0.85em;" onclick="return false;">
+                        <span id="dropdownUserRole">Role</span>
+                    </a>
                     <a href="#" onclick="logout()">Logout</a>
                 </div>
             </div>
@@ -524,9 +554,9 @@
                     ⏰ Expired
                     <span class="folder-count" id="countExpired">0</span>
                 </li>
-                <li onclick="filterByFolder('revoked')">
-                    ❌ Revoked / Invalid
-                    <span class="folder-count" id="countRevoked">0</span>
+                <li onclick="filterByFolder('cancelled')">
+                    ❌ Cancelled / Invalid
+                    <span class="folder-count" id="countCancelled">0</span>
                 </li>
             </ul>
 
@@ -572,15 +602,17 @@
                     <div class="stat-label">Expired</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-value" id="revokedCerts">0</div>
-                    <div class="stat-label">Revoked</div>
+                    <div class="stat-value" id="cancelledCerts">0</div>
+                    <div class="stat-label">Cancelled</div>
                 </div>
             </div>
 
             <!-- Actions Bar -->
             <div class="actions-bar">
                 <div class="search-box">
-                    <input type="text" id="searchInput" placeholder="Search certificates..." onkeyup="searchCertificates()">
+                    <input type="text" id="searchInput" placeholder="Search certificates by name, issuer, or type..."
+                           onkeypress="if(event.key === 'Enter') searchCertificates()">
+                    <button onclick="searchCertificates()">Search</button>
                 </div>
                 <div class="action-buttons">
                     <button class="btn btn-secondary" onclick="showMoveModal()">Move Selected</button>
@@ -707,24 +739,24 @@
         </div>
     </div>
 
-    <!-- Revoke Certificate Modal -->
-    <div class="modal" id="revokeModal">
+    <!-- Cancel Certificate Modal -->
+    <div class="modal" id="cancelModal">
         <div class="modal-content">
             <div class="modal-header">
-                <h2>Revoke Certificate</h2>
-                <span class="modal-close" onclick="closeModal('revokeModal')">×</span>
+                <h2>Cancel Certificate</h2>
+                <span class="modal-close" onclick="closeModal('cancelModal')">×</span>
             </div>
-            <form id="revokeForm">
+            <form id="cancelForm">
                 <div style="margin-bottom: 20px; padding: 15px; background: #fff3cd; border-radius: 5px; color: #856404;">
-                    <strong>⚠️ Warning:</strong> This action cannot be undone. The certificate will be permanently revoked on the blockchain.
+                    <strong>⚠️ Warning:</strong> This action cannot be undone. The certificate will be permanently cancelled on the blockchain.
                 </div>
                 <div class="form-group">
-                    <label>Revocation Reason *</label>
-                    <textarea id="revocationReason" required placeholder="Please provide a reason for revoking this certificate..." style="min-height: 120px;"></textarea>
+                    <label>Cancellation Reason *</label>
+                    <textarea id="cancellationReason" required placeholder="Please provide a reason for cancelling this certificate..." style="min-height: 120px;"></textarea>
                 </div>
                 <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="closeModal('revokeModal')">Cancel</button>
-                    <button type="submit" class="btn btn-primary" style="background: #dc3545;">Revoke Certificate</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('cancelModal')">Cancel</button>
+                    <button type="submit" class="btn btn-primary" style="background: #dc3545;">Cancel Certificate</button>
                 </div>
             </form>
         </div>
@@ -744,10 +776,160 @@
 
         // Initialize
         window.onload = function() {
-            loadCertificates();
+            // Apply role-based visibility
+            applyRoleBasedVisibility();
+
+            // Load statistics and counts, but don't display certificates
+            loadStatisticsOnly();
+            showSearchPrompt();
         };
 
-        // Load Certificates
+        // Apply role-based visibility based on user permissions
+        function applyRoleBasedVisibility() {
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
+            const permissions = user.permissions || [];
+            const role = user.role || '';
+
+            console.log('User Role:', role);
+            console.log('User Permissions:', permissions);
+
+            // Update header with user info
+            const userName = user.name || user.username || 'User';
+            const roleDisplay = {
+                'super_admin': 'Super Administrator',
+                'admin': 'Administrator',
+                'document_manager': 'Document Manager'
+            }[role] || 'Admin';
+
+            document.getElementById('headerUserName').textContent = userName;
+            document.getElementById('dropdownUserRole').textContent = roleDisplay;
+
+            // Document Manager - Show ONLY document management
+            if (role === 'document_manager') {
+                // Hide certificate folders
+                document.querySelectorAll('.sidebar > h3')[0].style.display = 'none';
+                document.querySelectorAll('.sidebar > ul')[0].style.display = 'none';
+
+                // Hide all management sections except Document Management
+                const managementItems = document.querySelectorAll('.sidebar .folder-list')[1].querySelectorAll('li');
+                managementItems.forEach((item, index) => {
+                    // Keep only: Document Management (3)
+                    if (index !== 3) {
+                        item.style.display = 'none';
+                    }
+                });
+
+                // Hide certificate statistics
+                const statCards = document.querySelectorAll('.stat-card');
+                if (statCards.length >= 4) {
+                    statCards[0].style.display = 'none'; // Total Certificates
+                    statCards[1].style.display = 'none'; // Active
+                    statCards[2].style.display = 'none'; // Expired
+                    statCards[3].style.display = 'none'; // Cancelled
+                }
+
+                // Hide certificate search and actions
+                const searchBox = document.querySelector('.search-box');
+                if (searchBox) searchBox.style.display = 'none';
+
+                const actionButtons = document.querySelector('.action-buttons');
+                if (actionButtons) actionButtons.style.display = 'none';
+
+                // Hide bulk upload button in header
+                const bulkUploadBtn = document.getElementById('bulkUploadBtn');
+                if (bulkUploadBtn) bulkUploadBtn.style.display = 'none';
+
+                // DO NOT automatically show bulk upload records popup for document managers
+                // They should only see documents they manage, not athlete competition data
+
+                return;
+            }
+
+            // Regular Admin - Hide User Management only, can access bulk upload
+            if (role === 'admin') {
+                // Admin can see everything except User Management and Document Management
+                // Admin CAN access bulk upload
+
+                // Hide Document Management from sidebar
+                const managementItems = document.querySelectorAll('.sidebar .folder-list')[1].querySelectorAll('li');
+                if (managementItems.length > 3) {
+                    managementItems[3].style.display = 'none'; // Document Management
+                }
+            }
+
+            // Super Admin - Show User Management link
+            if (role === 'super_admin') {
+                // Add User Management link to sidebar
+                const managementSection = document.querySelectorAll('.sidebar .folder-list')[1];
+                if (managementSection && !document.getElementById('user-management-link')) {
+                    const userMgmtLi = document.createElement('li');
+                    userMgmtLi.id = 'user-management-link';
+                    userMgmtLi.innerHTML = '👥 User Management';
+                    userMgmtLi.onclick = function() {
+                        window.location.href = '/static/user-management.html';
+                    };
+                    managementSection.insertBefore(userMgmtLi, managementSection.children[0]);
+                }
+            }
+        }
+
+        // Load statistics only (without displaying certificates)
+        function loadStatisticsOnly() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                console.error('No token found');
+                return;
+            }
+
+            // Fetch claimed/issued certificates from admin endpoint with cache-busting
+            const cacheBuster = Date.now();
+            console.log('[DEBUG] Loading statistics at:', new Date().toISOString());
+            fetch(`/api/admin/certificate-requests?status=approved&_=${cacheBuster}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('[DEBUG] Received data for statistics:', data);
+                    if (data.success) {
+                        // Convert admin certificate requests to certificate format
+                        certificates = data.requests.map(req => {
+                            return {
+                                id: req.id,
+                                cert_hash: req.certificateHash,
+                                subject_name: req.competitionData?.fullName || req.athleteName,
+                                issuer_name: 'Sports and Youth Services, Maharashtra State',
+                                certificate_type: 'Sports Achievement',
+                                issued_date: req.processedAt || req.requestedAt,
+                                expiry_date: req.certificateExpiryDate || null,
+                                status: req.certificateStatus || 'active',
+                                metadata: {
+                                    athleteName: req.athleteName,
+                                    athleteEmail: req.athleteEmail,
+                                    athletePhone: req.athletePhone,
+                                    gameName: req.competitionData?.gameName,
+                                    competitionName: req.competitionData?.competitionName,
+                                    positionObtained: req.competitionData?.positionObtained,
+                                    district: req.competitionData?.district,
+                                    certificateNo: req.competitionData?.certificateNo
+                                }
+                            };
+                        });
+                        console.log('[DEBUG] Loaded certificates for statistics:', certificates.length);
+                        // Update statistics but DON'T display certificates
+                        updateStats();
+                        // Don't call displayCertificates() here
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showToast('Failed to load statistics');
+                });
+        }
+
+        // Load Certificates (used by search and display)
         function loadCertificates() {
             const token = localStorage.getItem('token');
             if (!token) {
@@ -755,36 +937,44 @@
                 return;
             }
 
-            // Fetch claimed/issued certificates from admin endpoint
-            fetch('/api/admin/certificate-requests?status=approved', {
+            // Fetch claimed/issued certificates from admin endpoint with cache-busting
+            const cacheBuster = Date.now();
+            console.log('[DEBUG] Loading certificates at:', new Date().toISOString());
+            fetch(`/api/admin/certificate-requests?status=approved&_=${cacheBuster}`, {
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Cache-Control': 'no-cache'
                 }
             })
                 .then(response => response.json())
                 .then(data => {
+                    console.log('[DEBUG] Received data:', data);
                     if (data.success) {
                         // Convert admin certificate requests to certificate format
-                        certificates = data.requests.map(req => ({
-                            id: req.id,
-                            cert_hash: req.certificateHash,
-                            subject_name: req.competitionData?.fullName || req.athleteName,
-                            issuer_name: 'Sports and Youth Services, Maharashtra State',
-                            certificate_type: 'Sports Achievement',
-                            issued_date: req.processedAt || req.requestedAt,
-                            expiry_date: null,
-                            status: 'active',
-                            metadata: {
-                                athleteName: req.athleteName,
-                                athleteEmail: req.athleteEmail,
-                                athletePhone: req.athletePhone,
-                                gameName: req.competitionData?.gameName,
-                                competitionName: req.competitionData?.competitionName,
-                                positionObtained: req.competitionData?.positionObtained,
-                                district: req.competitionData?.district,
-                                certificateNo: req.competitionData?.certificateNo
-                            }
-                        }));
+                        certificates = data.requests.map(req => {
+                            console.log('[DEBUG] Certificate:', req.certificateHash, 'Status:', req.certificateStatus);
+                            return {
+                                id: req.id,
+                                cert_hash: req.certificateHash,
+                                subject_name: req.competitionData?.fullName || req.athleteName,
+                                issuer_name: 'Sports and Youth Services, Maharashtra State',
+                                certificate_type: 'Sports Achievement',
+                                issued_date: req.processedAt || req.requestedAt,
+                                expiry_date: req.certificateExpiryDate || null,
+                                status: req.certificateStatus || 'active',
+                                metadata: {
+                                    athleteName: req.athleteName,
+                                    athleteEmail: req.athleteEmail,
+                                    athletePhone: req.athletePhone,
+                                    gameName: req.competitionData?.gameName,
+                                    competitionName: req.competitionData?.competitionName,
+                                    positionObtained: req.competitionData?.positionObtained,
+                                    district: req.competitionData?.district,
+                                    certificateNo: req.competitionData?.certificateNo
+                                }
+                            };
+                        });
+                        console.log('[DEBUG] Mapped certificates:', certificates);
                         updateStats();
                         displayCertificates();
                     }
@@ -799,18 +989,18 @@
         function updateStats() {
             const total = certificates.length;
             const active = certificates.filter(c => c.status === 'active' && !isExpired(c)).length;
-            const expired = certificates.filter(c => isExpired(c) && c.status !== 'revoked').length;
-            const revoked = certificates.filter(c => c.status === 'revoked').length;
+            const expired = certificates.filter(c => isExpired(c) && c.status !== 'cancelled').length;
+            const cancelled = certificates.filter(c => c.status === 'cancelled').length;
 
             document.getElementById('totalCerts').textContent = total;
             document.getElementById('activeCerts').textContent = active;
             document.getElementById('expiredCerts').textContent = expired;
-            document.getElementById('revokedCerts').textContent = revoked;
+            document.getElementById('cancelledCerts').textContent = cancelled;
 
             document.getElementById('countAll').textContent = total;
             document.getElementById('countActive').textContent = active;
             document.getElementById('countExpired').textContent = expired;
-            document.getElementById('countRevoked').textContent = revoked;
+            document.getElementById('countCancelled').textContent = cancelled;
         }
 
         // Check if certificate is expired
@@ -828,9 +1018,9 @@
             if (currentFolder === 'active') {
                 filtered = certificates.filter(c => c.status === 'active' && !isExpired(c));
             } else if (currentFolder === 'expired') {
-                filtered = certificates.filter(c => isExpired(c) && c.status !== 'revoked');
-            } else if (currentFolder === 'revoked') {
-                filtered = certificates.filter(c => c.status === 'revoked');
+                filtered = certificates.filter(c => isExpired(c) && c.status !== 'cancelled');
+            } else if (currentFolder === 'cancelled') {
+                filtered = certificates.filter(c => c.status === 'cancelled');
             }
 
             if (filtered.length === 0) {
@@ -843,7 +1033,7 @@
             emptyState.style.display = 'none';
 
             grid.innerHTML = filtered.map(cert => {
-                const status = cert.status === 'revoked' ? 'revoked' : (isExpired(cert) ? 'expired' : 'active');
+                const status = cert.status === 'cancelled' ? 'cancelled' : (isExpired(cert) ? 'expired' : 'active');
                 const isSelected = selectedCertificates.has(cert.cert_hash);
 
                 return `
@@ -860,7 +1050,7 @@
                             <button onclick="viewCertificate('${cert.cert_hash}')">View</button>
                             <button onclick="showQR('${cert.cert_hash}')">QR Code</button>
                             <button onclick="downloadCertificate('${cert.cert_hash}')">Download</button>
-                            ${cert.status !== 'revoked' ? `<button onclick="revokeCertificate('${cert.cert_hash}')" style="background: #ff4444; color: white;">Revoke</button>` : ''}
+                            ${cert.status !== 'cancelled' ? `<button onclick="cancelCertificate('${cert.cert_hash}')" style="background: #ff4444; color: white;">Cancel</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -894,21 +1084,76 @@
             displayCertificates();
         }
 
+        // Show search prompt (initial state)
+        function showSearchPrompt() {
+            const grid = document.getElementById('certificatesGrid');
+            const emptyState = document.getElementById('emptyState');
+
+            grid.style.display = 'none';
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">🔍</div>
+                    <h2 style="color: #333; margin-bottom: 15px;">Search for Certificates</h2>
+                    <p style="color: #666; font-size: 16px; max-width: 500px; margin: 0 auto;">
+                        Use the search box above to find certificates by name, issuer, or certificate type.
+                    </p>
+                    <p style="color: #888; font-size: 14px; margin-top: 15px;">
+                        Certificates are loaded in the background. Statistics show the total counts.
+                    </p>
+                    <p style="color: #888; font-size: 14px; margin-top: 10px;">
+                        <strong>Search to view certificate details.</strong>
+                    </p>
+                </div>
+            `;
+            // Keep the statistics as-is (showing actual counts)
+        }
+
         // Search Certificates
         function searchCertificates() {
-            const query = document.getElementById('searchInput').value;
+            const query = document.getElementById('searchInput').value.trim();
+
+            // If search is empty, show search prompt
+            if (!query) {
+                showSearchPrompt();
+                return;
+            }
+
+            // Show loading state
+            const grid = document.getElementById('certificatesGrid');
+            const emptyState = document.getElementById('emptyState');
+            emptyState.style.display = 'block';
+            emptyState.innerHTML = `
+                <div style="text-align: center; padding: 60px 20px;">
+                    <div style="font-size: 48px; margin-bottom: 20px;">⏳</div>
+                    <h3 style="color: #333;">Searching certificates...</h3>
+                </div>
+            `;
+            grid.style.display = 'none';
 
             fetch(`/api/certificates/search?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
                         certificates = data.data;
+                        updateStats();
                         displayCertificates();
+
+                        if (certificates.length > 0) {
+                            showToast(`Found ${certificates.length} certificate(s)`);
+                        }
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     showToast('Search failed');
+                    emptyState.innerHTML = `
+                        <div style="text-align: center; padding: 60px 20px;">
+                            <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+                            <h3 style="color: #c33;">Search Failed</h3>
+                            <p style="color: #666;">Please try again</p>
+                        </div>
+                    `;
                 });
         }
 
@@ -1130,30 +1375,29 @@
             }, 3000);
         }
 
-        // Revoke Certificate
-        let certificateToRevoke = null;
+        // Cancel Certificate
+        let certificateToCancel = null;
 
-        function revokeCertificate(certHash) {
-            event.stopPropagation();
-            certificateToRevoke = certHash;
-            showModal('revokeModal');
+        function cancelCertificate(certHash) {
+            certificateToCancel = certHash;
+            showModal('cancelModal');
         }
 
-        // Handle Revoke Form Submission
-        document.getElementById('revokeForm').onsubmit = async function(e) {
+        // Handle Cancel Form Submission
+        document.getElementById('cancelForm').onsubmit = async function(e) {
             e.preventDefault();
 
-            const reason = document.getElementById('revocationReason').value;
+            const reason = document.getElementById('cancellationReason').value;
 
-            if (!reason || !certificateToRevoke) {
-                showToast('Please provide a revocation reason');
+            if (!reason || !certificateToCancel) {
+                showToast('Please provide a cancellation reason');
                 return;
             }
 
             const token = localStorage.getItem('token');
 
             try {
-                const response = await fetch(`/api/certificates/revoke/${certificateToRevoke}`, {
+                const response = await fetch(`/api/certificates/cancel/${certificateToCancel}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1165,17 +1409,17 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    showToast('Certificate revoked successfully');
-                    closeModal('revokeModal');
-                    document.getElementById('revocationReason').value = '';
-                    certificateToRevoke = null;
+                    showToast('Certificate cancelled successfully');
+                    closeModal('cancelModal');
+                    document.getElementById('cancellationReason').value = '';
+                    certificateToCancel = null;
                     loadCertificates(); // Reload certificates
                 } else {
-                    showToast('Failed to revoke certificate: ' + (result.message || 'Unknown error'));
+                    showToast('Failed to cancel certificate: ' + (result.message || 'Unknown error'));
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showToast('Failed to revoke certificate');
+                showToast('Failed to cancel certificate');
             }
         };
 
@@ -1230,7 +1474,7 @@
                                 <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.phoneNumber || '-'}</td>
                                 <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.dob || '-'}</td>
                                 <td style="padding:10px;border-bottom:1px solid #eee;">
-                                    <button onclick="showAssignCertificateModal('${athlete.id}', '${athlete.fullName}')" style="padding:5px 10px;background:#4CAF50;color:white;border:none;border-radius:3px;cursor:pointer;">Assign Certificate</button>
+                                    <button onclick="showAssignCertificateModal('${athlete.id}', '${athlete.fullName}')" style="padding:5px 10px;background:#ff6b9d;color:white;border:none;border-radius:3px;cursor:pointer;">Assign Certificate</button>
                                 </td>
                             </tr>
                         `;
@@ -1301,7 +1545,7 @@
                         </div>
                         <div style="margin-top:20px;text-align:right;">
                             <button onclick="document.getElementById('assignCertModalOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;margin-right:10px;">Cancel</button>
-                            <button onclick="assignCertificateToAthlete('${athleteId}', '${athleteName}')" style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;">Assign</button>
+                            <button onclick="assignCertificateToAthlete('${athleteId}', '${athleteName}')" style="padding:10px 20px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;">Assign</button>
                         </div>
                     </div>
                 </div>
@@ -1416,7 +1660,7 @@
                                 </td>
                                 <td style="padding:12px;border-bottom:1px solid #eee;">
                                     ${request.status === 'pending' ? `
-                                        <button onclick="approveRequest('${request.id}')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Approve</button>
+                                        <button onclick="approveRequest('${request.id}')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Approve</button>
                                         <button onclick="rejectRequest('${request.id}')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
                                     ` : `
                                         <button onclick="viewRequestDetails('${request.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View</button>
@@ -1536,7 +1780,7 @@
                         </div>
 
                         <div style="margin-bottom:25px;">
-                            <button onclick="showUploadDocumentModal()" style="padding:12px 24px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                            <button onclick="showUploadDocumentModal()" style="padding:12px 24px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
                                 📤 Upload New Document
                             </button>
                         </div>
@@ -1599,7 +1843,7 @@
                                     Cancel
                                 </button>
                                 <button type="submit" id="uploadDocBtn"
-                                        style="padding:12px 24px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                                        style="padding:12px 24px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
                                     Upload Document
                                 </button>
                             </div>
@@ -1641,7 +1885,7 @@
 
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => {
-                    dropArea.style.borderColor = '#4CAF50';
+                    dropArea.style.borderColor = '#ff6b9d';
                     dropArea.style.background = '#f0fdf4';
                 }, false);
             });
@@ -1785,6 +2029,7 @@
                                 <table id="complaintsTable" style="width:100%;border-collapse:collapse;">
                                     <thead>
                                         <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Ticket ID</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Date</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Name</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Email</th>
@@ -1798,7 +2043,7 @@
                 `;
 
                 if (complaints.length === 0) {
-                    modalHTML += '<tr><td colspan="7" style="padding:30px;text-align:center;color:#999;">No complaints found</td></tr>';
+                    modalHTML += '<tr><td colspan="8" style="padding:30px;text-align:center;color:#999;">No complaints found</td></tr>';
                 } else {
                     complaints.forEach(complaint => {
                         const statusColors = {
@@ -1814,11 +2059,13 @@
                             fraudulent: 'Fraudulent',
                             unauthorized: 'Unauthorized',
                             technical: 'Technical',
+                            missing_certificate: 'Missing Certificate',
                             other: 'Other'
                         };
 
                         modalHTML += `
                             <tr class="complaint-row" data-status="${complaint.status}" style="border-bottom:1px solid #eee;">
+                                <td style="padding:12px;font-family:monospace;font-size:0.85em;font-weight:600;color:#ff6b9d;">${complaint.ticket_id || 'N/A'}</td>
                                 <td style="padding:12px;">${new Date(complaint.created_at).toLocaleDateString()}</td>
                                 <td style="padding:12px;">${complaint.name}</td>
                                 <td style="padding:12px;font-size:0.9em;">${complaint.email}</td>
@@ -1828,7 +2075,7 @@
                                     <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${complaint.status.replace('_', ' ').toUpperCase()}</span>
                                 </td>
                                 <td style="padding:12px;">
-                                    <button onclick="viewComplaintDetails('${complaint.id}')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">View</button>
+                                    <button onclick="viewComplaintDetails('${complaint.id}')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">View</button>
                                     <button onclick="updateComplaintStatus('${complaint.id}', '${complaint.status}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Update</button>
                                 </td>
                             </tr>
@@ -1959,7 +2206,7 @@
                             </div>
                             <div style="display:flex;gap:10px;justify-content:flex-end;">
                                 <button type="button" onclick="document.getElementById('updateComplaintOverlay').remove()" style="padding:10px 20px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Cancel</button>
-                                <button type="submit" style="padding:10px 20px;background:#4CAF50;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Update Status</button>
+                                <button type="submit" style="padding:10px 20px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Update Status</button>
                             </div>
                         </form>
                     </div>
@@ -2104,7 +2351,7 @@
                                 </td>
                                 <td style="padding:12px;border-bottom:1px solid #eee;">
                                     ${appeal.status === 'pending' ? `
-                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'accepted')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Accept</button>
+                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'accepted')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Accept</button>
                                         <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'rejected')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
                                     ` : `
                                         <button onclick="viewAppealDetails('${appeal.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View Details</button>

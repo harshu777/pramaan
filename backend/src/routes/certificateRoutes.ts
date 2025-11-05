@@ -134,28 +134,48 @@ router.get('/validate/:certHash',
   })
 );
 
-router.post('/revoke/:certHash',
-  authenticate,
-  authorize('issuer', 'admin'),
-  asyncHandler(async (req: Request, res: Response) => {
-    const { certHash } = req.params;
-    const { reason } = req.body;
-    const revokedBy = (req as any).user?.did || 'system';
+// Certificate cancellation endpoint
+const cancelCertificateHandler = asyncHandler(async (req: Request, res: Response) => {
+  const { certHash } = req.params;
+  const { reason } = req.body;
+  const user = (req as any).user;
+  const cancelledBy = user?.did || user?.email || user?.username || 'admin';
 
-    if (!reason) {
-      return res.status(400).json({
-        success: false,
-        message: 'Revocation reason is required',
-      });
-    }
+  if (!reason) {
+    return res.status(400).json({
+      success: false,
+      message: 'Cancellation reason is required',
+    });
+  }
 
-    await certificateService.revokeCertificate(certHash, reason, revokedBy);
+  try {
+    await certificateService.cancelCertificate(certHash, reason, cancelledBy);
 
     res.json({
       success: true,
-      message: 'Certificate revoked successfully',
+      message: 'Certificate cancelled successfully',
     });
-  })
+  } catch (error) {
+    logger.error('Certificate cancellation error:', error);
+    res.status(500).json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Failed to cancel certificate'
+    });
+  }
+});
+
+// New cancel route
+router.post('/cancel/:certHash',
+  authenticate,
+  authorize('issuer', 'admin'),
+  cancelCertificateHandler
+);
+
+// Legacy revoke route (backward compatibility) - DEPRECATED
+router.post('/revoke/:certHash',
+  authenticate,
+  authorize('issuer', 'admin'),
+  cancelCertificateHandler
 );
 
 router.get('/qr/:certHash',
@@ -565,7 +585,7 @@ router.get('/verify/:certHash',
             <div class="info">
               <span class="label">Status:</span>
               <span class="value">${validation.certificate.status}</span>
-              ${validation.certificate.isRevoked ? '<span class="verification-badge unverified">Revoked</span>' : ''}
+              ${validation.certificate.isCancelled ? '<span class="verification-badge unverified">Cancelled</span>' : ''}
             </div>
             <div class="info">
               <span class="label">Blockchain:</span>

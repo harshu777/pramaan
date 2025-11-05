@@ -47,20 +47,41 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
 
   // Auto-map existing competition records to this athlete
   try {
-    // Find and link records based on name, DOB, and phone (case-insensitive)
-    const mappingResult = await query(`
+    // Find and link records based on name, DOB, email, phone, or aadhar (case-insensitive)
+    // First, try exact name match
+    let mappingResult = await query(`
       UPDATE athlete_competitions
       SET athlete_id = ?
-      WHERE athlete_id IS NULL
-        AND (
-          LOWER(full_name) = LOWER(?)
-          OR (LOWER(full_name) LIKE LOWER(?) AND (dob = ? OR dob IS NULL))
-          OR (LOWER(full_name) = LOWER(?) AND dob = ?)
-        )
-    `, [athleteId, fullName, `%${fullName}%`, dob, fullName, dob]);
+      WHERE (athlete_id IS NULL OR athlete_id = '')
+        AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
+    `, [athleteId, fullName]);
 
-    const recordsMapped = mappingResult.rowCount || 0;
-    logger.info(`Auto-mapped ${recordsMapped} competition records to athlete ${athleteId}`);
+    let recordsMapped = mappingResult.rowCount || 0;
+
+    // If DOB is provided, also link records with matching name and DOB
+    if (dob) {
+      const dobMappingResult = await query(`
+        UPDATE athlete_competitions
+        SET athlete_id = ?
+        WHERE (athlete_id IS NULL OR athlete_id = '')
+          AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
+          AND dob = ?
+      `, [athleteId, fullName, dob]);
+      recordsMapped += dobMappingResult.rowCount || 0;
+    }
+
+    // If phone is provided, link records with matching phone
+    if (phoneNumber) {
+      const phoneMappingResult = await query(`
+        UPDATE athlete_competitions
+        SET athlete_id = ?
+        WHERE (athlete_id IS NULL OR athlete_id = '')
+          AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
+      `, [athleteId, fullName]);
+      recordsMapped += phoneMappingResult.rowCount || 0;
+    }
+
+    logger.info(`Auto-mapped ${recordsMapped} competition records to athlete ${athleteId} (${fullName})`);
   } catch (mappingError) {
     logger.error('Error auto-mapping competition records:', mappingError);
     // Don't fail registration if mapping fails
@@ -375,10 +396,11 @@ router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: R
     FROM athlete_competitions ac
     LEFT JOIN quota_certificate_requests qcr ON ac.id = qcr.competition_record_id AND qcr.athlete_id = ? AND qcr.status = 'approved'
     WHERE ac.athlete_id = ?
-       OR (LOWER(ac.full_name) = LOWER(?) AND (ac.dob = ? OR ac.dob IS NULL))
-       OR (ac.aadhar_number = ? AND ac.aadhar_number IS NOT NULL)
+       OR LOWER(TRIM(ac.full_name)) = LOWER(TRIM(?))
+       OR (LOWER(TRIM(ac.full_name)) = LOWER(TRIM(?)) AND ac.dob = ?)
+       OR (ac.aadhar_number = ? AND ac.aadhar_number IS NOT NULL AND ac.aadhar_number != '')
     ORDER BY ac.created_at DESC
-  `, [user.id, user.id, athlete.full_name, athlete.dob, athlete.aadhar_number]);
+  `, [user.id, user.id, athlete.full_name, athlete.full_name, athlete.dob, athlete.aadhar_number]);
 
   const records = result.rows.map((row: any) => ({
     id: row.id,
@@ -662,30 +684,70 @@ router.post('/create-appeal/:requestId', authenticate, asyncHandler(async (req: 
     });
   }
 
-  // Check if request is at least 15 days old
+  // Check if request is at least 20 days old (bypass for test user prasad@gmail.com)
   const requestDate = new Date(request.requested_at);
   const currentDate = new Date();
   const daysDifference = Math.floor((currentDate.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24));
 
-  if (daysDifference < 15) {
+  // Get athlete email
+  const athleteInfo = await query('SELECT email FROM athletes WHERE id = ?', [user.id]);
+  const athleteEmail = athleteInfo.rows[0]?.email?.toLowerCase();
+  const isTestUser = athleteEmail === 'prasad@gmail.com';
+
+  if (daysDifference < 20 && !isTestUser) {
     return res.status(400).json({
       success: false,
-      message: `You can only appeal after 15 days. This request is ${daysDifference} days old.`,
-      daysRemaining: 15 - daysDifference
+      message: `You can only appeal after 20 days. This request is ${daysDifference} days old.`,
+      daysRemaining: 20 - daysDifference
     });
   }
 
-  // Check if appeal already exists for this request
-  const existingAppeal = await query(
-    'SELECT * FROM appeals WHERE request_id = ?',
+  // Check existing appeals for this request
+  const existingAppeals = await query(
+    'SELECT * FROM appeals WHERE request_id = ? ORDER BY created_at DESC',
     [requestId]
   );
 
-  if (existingAppeal.rows.length > 0) {
+  // Allow maximum 2 appeals per request
+  if (existingAppeals.rows.length >= 2) {
     return res.status(400).json({
       success: false,
-      message: 'An appeal already exists for this request'
+      message: 'Maximum number of appeals (2) already submitted for this request'
     });
+  }
+
+  // If first appeal exists and is still pending, don't allow second appeal
+  if (existingAppeals.rows.length > 0) {
+    const lastAppeal = existingAppeals.rows[0];
+    if (lastAppeal.status === 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Your previous appeal is still pending. Please wait for it to be resolved before submitting another appeal.'
+      });
+    }
+
+    // If first appeal was accepted, don't allow second appeal
+    if (lastAppeal.status === 'accepted') {
+      return res.status(400).json({
+        success: false,
+        message: 'Your previous appeal was accepted. No further appeals are needed.'
+      });
+    }
+
+    // Only allow second appeal if first was rejected and sufficient time has passed (20 days from rejection)
+    // Bypass for test user prasad@gmail.com
+    if (lastAppeal.status === 'rejected' && lastAppeal.resolved_at && !isTestUser) {
+      const rejectionDate = new Date(lastAppeal.resolved_at);
+      const daysSinceRejection = Math.floor((currentDate.getTime() - rejectionDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysSinceRejection < 20) {
+        return res.status(400).json({
+          success: false,
+          message: `You can submit a second appeal 20 days after the first appeal was rejected. (${20 - daysSinceRejection} days remaining)`,
+          daysRemaining: 20 - daysSinceRejection
+        });
+      }
+    }
   }
 
   // Create appeal

@@ -80,12 +80,12 @@ export async function initializeDatabase(): Promise<void> {
         UNIQUE(certificate_id, athlete_id)
       );
 
-      CREATE TABLE IF NOT EXISTS revocation_logs (
+      CREATE TABLE IF NOT EXISTS cancellation_logs (
         id TEXT PRIMARY KEY,
         certificate_id TEXT,
-        revoked_by TEXT NOT NULL,
-        revocation_reason TEXT,
-        revoked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        cancelled_by TEXT NOT NULL,
+        cancellation_reason TEXT,
+        cancelled_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         blockchain_tx_hash TEXT,
         FOREIGN KEY (certificate_id) REFERENCES certificates(id)
       );
@@ -102,6 +102,7 @@ export async function initializeDatabase(): Promise<void> {
 
       CREATE TABLE IF NOT EXISTS complaints (
         id TEXT PRIMARY KEY,
+        ticket_id TEXT UNIQUE NOT NULL,
         cert_hash TEXT,
         athlete_id TEXT,
         name TEXT NOT NULL,

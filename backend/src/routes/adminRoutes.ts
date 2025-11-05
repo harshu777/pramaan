@@ -148,10 +148,13 @@ router.get('/certificate-requests', authenticate, asyncHandler(async (req: Reque
       ac.game_name, ac.competition_name, ac.competition_level,
       ac.competition_period, ac.competition_held_at, ac.position_obtained,
       ac.certificate_no, ac.representing_district, ac.division_state_country,
-      ac.valid_for_employment_group, ac.applicable_govt_resolutions
+      ac.valid_for_employment_group, ac.applicable_govt_resolutions,
+      c.status as certificate_status,
+      c.expiry_date as certificate_expiry_date
     FROM quota_certificate_requests qcr
     INNER JOIN athletes a ON qcr.athlete_id = a.id
     INNER JOIN athlete_competitions ac ON qcr.competition_record_id = ac.id
+    LEFT JOIN certificates c ON qcr.certificate_hash = c.cert_hash
   `;
 
   const params: any[] = [];
@@ -173,6 +176,8 @@ router.get('/certificate-requests', authenticate, asyncHandler(async (req: Reque
     competitionRecordId: row.competition_record_id,
     status: row.status,
     certificateHash: row.certificate_hash,
+    certificateStatus: row.certificate_status || 'active',
+    certificateExpiryDate: row.certificate_expiry_date,
     adminNotes: row.admin_notes,
     rejectionReason: row.rejection_reason,
     requestedAt: row.requested_at,

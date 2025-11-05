@@ -74,12 +74,14 @@ export function authorize(...roles: string[]) {
       return;
     }
 
-    if (roles.includes('issuer') && req.user.is_active) {
+    // Check if user is an issuer with required role
+    if (roles.includes('issuer') && req.user.type === 'issuer' && req.user.is_active) {
       next();
       return;
     }
 
-    if (roles.includes('admin') && req.user.is_admin) {
+    // Check if user is an admin (issuers table has 'role' field, not 'is_admin')
+    if (roles.includes('admin') && req.user.type === 'issuer' && req.user.role === 'admin') {
       next();
       return;
     }

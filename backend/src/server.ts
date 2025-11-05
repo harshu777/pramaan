@@ -15,6 +15,9 @@ import complaintRoutes from './routes/complaintRoutes';
 import quotaCertificateRoutes from './routes/quotaCertificateRoutes';
 import appealRoutes from './routes/appealRoutes';
 import adminRoutes from './routes/adminRoutes';
+import userManagementRoutes from './routes/userManagementRoutes';
+import authRoutes from './routes/authRoutes';
+import documentRoutes from './routes/documentRoutes';
 import { initializeDatabase } from './config/database-sqlite';
 import { initializeBlockchain } from './services/blockchainService';
 
@@ -55,6 +58,9 @@ app.use('/api/complaints', complaintRoutes);
 app.use('/api/quota-certificates', quotaCertificateRoutes);
 app.use('/api/appeals', appealRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/user-management', userManagementRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/documents', documentRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });

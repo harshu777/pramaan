@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Certificate Management System</title>
+    <title>E-Pramaan</title>
     <style>
         * {
             margin: 0;
@@ -13,7 +13,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -116,11 +116,11 @@
         .form-group select:focus,
         .form-group textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #ff6b9d;
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
             color: white;
             border: none;
             padding: 0.75rem 2rem;
@@ -174,7 +174,7 @@
 
         .qr-container img {
             max-width: 200px;
-            border: 2px solid #667eea;
+            border: 2px solid #ff6b9d;
             border-radius: 10px;
             padding: 10px;
             background: white;
@@ -190,7 +190,7 @@
         .feature {
             text-align: center;
             padding: 1rem;
-            background: rgba(102, 126, 234, 0.1);
+            background: rgba(255, 107, 157, 0.1);
             border-radius: 5px;
         }
 
@@ -223,7 +223,7 @@
         }
 
         .tab.active {
-            color: #667eea;
+            color: #ff6b9d;
         }
 
         .tab.active::after {
@@ -233,7 +233,7 @@
             left: 0;
             right: 0;
             height: 2px;
-            background: #667eea;
+            background: #ff6b9d;
         }
 
         .tab-content {
@@ -246,7 +246,7 @@
 
         .loader {
             border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border-top: 3px solid #ff6b9d;
             border-radius: 50%;
             width: 30px;
             height: 30px;
@@ -262,7 +262,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>🔐 Blockchain Certificate Management System</h1>
+        <h1>🔐 Blockchain E-Pramaan</h1>
     </div>
 
     <div class="container">
@@ -461,7 +461,7 @@
                         ${cert.expiryDate ? `Expires: ${new Date(cert.expiryDate).toLocaleDateString()}<br>` : ''}
                         Status: ${cert.status}<br>
                         ${cert.isExpired ? '<span style="color: orange;">⚠ Certificate has expired</span><br>' : ''}
-                        ${cert.isRevoked ? '<span style="color: red;">⚠ Certificate has been revoked</span><br>' : ''}
+                        ${cert.isCancelled ? '<span style="color: red;">⚠ Certificate has been cancelled</span><br>' : ''}
                         Blockchain: ${cert.blockchainVerified ? '✓ Verified' : '✗ Not Verified'}<br>
                         IPFS: ${cert.ipfsVerified ? '✓ Verified' : '✗ Not Verified'}
                     `;

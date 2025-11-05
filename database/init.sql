@@ -5,7 +5,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Create enum for certificate status
-CREATE TYPE cert_status AS ENUM ('active', 'revoked', 'expired');
+CREATE TYPE cert_status AS ENUM ('active', 'cancelled', 'expired');
 
 -- Create main certificates table
 CREATE TABLE certificates (
@@ -45,13 +45,13 @@ CREATE INDEX idx_certificates_status ON certificates(status);
 CREATE INDEX idx_certificates_issued_date ON certificates(issued_date DESC);
 CREATE INDEX idx_certificates_search ON certificates USING GIN(search_vector);
 
--- Create revocation logs table
-CREATE TABLE revocation_logs (
+-- Create cancellation logs table
+CREATE TABLE cancellation_logs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     certificate_id UUID REFERENCES certificates(id) ON DELETE CASCADE,
-    revoked_by VARCHAR(255) NOT NULL,
-    revocation_reason TEXT,
-    revoked_at TIMESTAMP DEFAULT NOW(),
+    cancelled_by VARCHAR(255) NOT NULL,
+    cancellation_reason TEXT,
+    cancelled_at TIMESTAMP DEFAULT NOW(),
     blockchain_tx_hash VARCHAR(66)
 );
 
