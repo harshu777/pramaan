@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 import { query } from '../config/database-sqlite';
 import { logger } from '../utils/logger';
 
-interface AuthRequest extends Request {
+export interface AuthRequest extends Request {
   user?: any;
 }
 
