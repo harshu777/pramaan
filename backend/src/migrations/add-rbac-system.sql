@@ -1,4 +1,4 @@
--- RBAC System Migration for E-Pramaan
+-- RBAC System Migration for Krida e-Pramaan
 -- Adds Role-Based Access Control with separate Document Manager and Admin roles
 
 -- Add role column to issuers table if not exists (already exists as 'admin')

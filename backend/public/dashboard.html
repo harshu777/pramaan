@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E-Pramaan Dashboard</title>
+    <title>Krida e-Pramaan Dashboard</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,8 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
             background: #f5f5f5;
             min-height: 100vh;
         }
@@ -126,7 +127,7 @@
         }
 
         .folder-list li.active {
-            background: #ff6b9d;
+            background: #861f41;
             color: white;
         }
 
@@ -196,8 +197,8 @@
 
         .search-box input:focus {
             outline: none;
-            border-color: #ff6b9d;
-            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+            border-color: #861f41;
+            box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.1);
         }
 
         .search-box button {
@@ -206,7 +207,7 @@
             top: 50%;
             transform: translateY(-50%);
             padding: 8px 20px;
-            background: #ff6b9d;
+            background: #861f41;
             color: white;
             border: none;
             border-radius: 6px;
@@ -216,7 +217,7 @@
         }
 
         .search-box button:hover {
-            background: #c44569;
+            background: #6b1833;
         }
 
         .action-buttons {
@@ -236,12 +237,12 @@
         }
 
         .btn-primary {
-            background: #ff6b9d;
+            background: #861f41;
             color: white;
         }
 
         .btn-primary:hover {
-            background: #c44569;
+            background: #6b1833;
         }
 
         .btn-secondary {
@@ -287,7 +288,7 @@
         }
 
         .certificate-card.selected {
-            border-color: #ff6b9d;
+            border-color: #861f41;
             background: #f0fdf4;
         }
 
@@ -442,7 +443,7 @@
 
         .move-option.selected {
             background: #e8f5e9;
-            border-color: #ff6b9d;
+            border-color: #861f41;
         }
 
         /* Toast */
@@ -485,7 +486,7 @@
         }
 
         .file-upload-area:hover {
-            border-color: #ff6b9d;
+            border-color: #861f41;
             background: #f9f9f9;
         }
 
@@ -515,11 +516,12 @@
             margin-bottom: 20px;
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="logo">📜 E-Pramaan</div>
+        <div class="logo">📜 Krida e-Pramaan</div>
         <div class="header-right">
             <a href="/static/bulk-upload.html" class="btn btn-primary" id="bulkUploadBtn">Bulk Upload</a>
             <div class="user-menu">
@@ -1474,7 +1476,7 @@
                                 <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.phoneNumber || '-'}</td>
                                 <td style="padding:10px;border-bottom:1px solid #eee;">${athlete.dob || '-'}</td>
                                 <td style="padding:10px;border-bottom:1px solid #eee;">
-                                    <button onclick="showAssignCertificateModal('${athlete.id}', '${athlete.fullName}')" style="padding:5px 10px;background:#ff6b9d;color:white;border:none;border-radius:3px;cursor:pointer;">Assign Certificate</button>
+                                    <button onclick="showAssignCertificateModal('${athlete.id}', '${athlete.fullName}')" style="padding:5px 10px;background:#861f41;color:white;border:none;border-radius:3px;cursor:pointer;">Assign Certificate</button>
                                 </td>
                             </tr>
                         `;
@@ -1545,7 +1547,7 @@
                         </div>
                         <div style="margin-top:20px;text-align:right;">
                             <button onclick="document.getElementById('assignCertModalOverlay').remove()" style="padding:10px 20px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;margin-right:10px;">Cancel</button>
-                            <button onclick="assignCertificateToAthlete('${athleteId}', '${athleteName}')" style="padding:10px 20px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;">Assign</button>
+                            <button onclick="assignCertificateToAthlete('${athleteId}', '${athleteName}')" style="padding:10px 20px;background:#861f41;color:white;border:none;border-radius:5px;cursor:pointer;">Assign</button>
                         </div>
                     </div>
                 </div>
@@ -1660,7 +1662,7 @@
                                 </td>
                                 <td style="padding:12px;border-bottom:1px solid #eee;">
                                     ${request.status === 'pending' ? `
-                                        <button onclick="approveRequest('${request.id}')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Approve</button>
+                                        <button onclick="approveRequest('${request.id}')" style="padding:6px 12px;background:#861f41;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Approve</button>
                                         <button onclick="rejectRequest('${request.id}')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
                                     ` : `
                                         <button onclick="viewRequestDetails('${request.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View</button>
@@ -1780,7 +1782,7 @@
                         </div>
 
                         <div style="margin-bottom:25px;">
-                            <button onclick="showUploadDocumentModal()" style="padding:12px 24px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                            <button onclick="showUploadDocumentModal()" style="padding:12px 24px;background:#861f41;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
                                 📤 Upload New Document
                             </button>
                         </div>
@@ -1843,7 +1845,7 @@
                                     Cancel
                                 </button>
                                 <button type="submit" id="uploadDocBtn"
-                                        style="padding:12px 24px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
+                                        style="padding:12px 24px;background:#861f41;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;font-weight:600;">
                                     Upload Document
                                 </button>
                             </div>
@@ -1885,7 +1887,7 @@
 
             ['dragenter', 'dragover'].forEach(eventName => {
                 dropArea.addEventListener(eventName, () => {
-                    dropArea.style.borderColor = '#ff6b9d';
+                    dropArea.style.borderColor = '#861f41';
                     dropArea.style.background = '#f0fdf4';
                 }, false);
             });
@@ -2065,7 +2067,7 @@
 
                         modalHTML += `
                             <tr class="complaint-row" data-status="${complaint.status}" style="border-bottom:1px solid #eee;">
-                                <td style="padding:12px;font-family:monospace;font-size:0.85em;font-weight:600;color:#ff6b9d;">${complaint.ticket_id || 'N/A'}</td>
+                                <td style="padding:12px;font-family:monospace;font-size:0.85em;font-weight:600;color:#861f41;">${complaint.ticket_id || 'N/A'}</td>
                                 <td style="padding:12px;">${new Date(complaint.created_at).toLocaleDateString()}</td>
                                 <td style="padding:12px;">${complaint.name}</td>
                                 <td style="padding:12px;font-size:0.9em;">${complaint.email}</td>
@@ -2075,7 +2077,7 @@
                                     <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${complaint.status.replace('_', ' ').toUpperCase()}</span>
                                 </td>
                                 <td style="padding:12px;">
-                                    <button onclick="viewComplaintDetails('${complaint.id}')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">View</button>
+                                    <button onclick="viewComplaintDetails('${complaint.id}')" style="padding:6px 12px;background:#861f41;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">View</button>
                                     <button onclick="updateComplaintStatus('${complaint.id}', '${complaint.status}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Update</button>
                                 </td>
                             </tr>
@@ -2206,7 +2208,7 @@
                             </div>
                             <div style="display:flex;gap:10px;justify-content:flex-end;">
                                 <button type="button" onclick="document.getElementById('updateComplaintOverlay').remove()" style="padding:10px 20px;background:#6c757d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Cancel</button>
-                                <button type="submit" style="padding:10px 20px;background:#ff6b9d;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Update Status</button>
+                                <button type="submit" style="padding:10px 20px;background:#861f41;color:white;border:none;border-radius:5px;cursor:pointer;font-size:15px;">Update Status</button>
                             </div>
                         </form>
                     </div>
@@ -2351,7 +2353,7 @@
                                 </td>
                                 <td style="padding:12px;border-bottom:1px solid #eee;">
                                     ${appeal.status === 'pending' ? `
-                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'accepted')" style="padding:6px 12px;background:#ff6b9d;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Accept</button>
+                                        <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'accepted')" style="padding:6px 12px;background:#861f41;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;margin-right:5px;">Accept</button>
                                         <button onclick="resolveAppeal('${appeal.id}', '${appeal.athleteName}', 'rejected')" style="padding:6px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">Reject</button>
                                     ` : `
                                         <button onclick="viewAppealDetails('${appeal.id}')" style="padding:6px 12px;background:#2196F3;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">View Details</button>

@@ -2,17 +2,17 @@ import { query } from '../config/database-sqlite';
 import { logger } from './logger';
 
 /**
- * Generate a unique ticket ID in the format: TKT-YYYYMMDD-XXXX
- * where XXXX is a 4-digit sequential number for the day
+ * Generate a unique ticket ID in the format: 2025DDMMYYYY-0001
+ * where the number is a 4-digit sequential number that resets daily
  */
 export async function generateTicketId(): Promise<string> {
   try {
-    // Get current date in YYYYMMDD format
+    // Get current date components
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const datePrefix = `${year}${month}${day}`;
+    const datePrefix = `${year}${day}${month}${year}`;
 
     // Get the count of tickets created today
     const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -31,7 +31,7 @@ export async function generateTicketId(): Promise<string> {
     const sequenceStr = String(sequenceNumber).padStart(4, '0');
 
     // Generate ticket ID
-    const ticketId = `TKT-${datePrefix}-${sequenceStr}`;
+    const ticketId = `${datePrefix}-${sequenceStr}`;
 
     logger.info(`Generated ticket ID: ${ticketId}`);
 
@@ -40,7 +40,7 @@ export async function generateTicketId(): Promise<string> {
     logger.error('Error generating ticket ID:', error);
     // Fallback to timestamp-based ID if database query fails
     const timestamp = Date.now();
-    return `TKT-${timestamp}`;
+    return `${timestamp}-0000`;
   }
 }
 
@@ -48,8 +48,8 @@ export async function generateTicketId(): Promise<string> {
  * Validate ticket ID format
  */
 export function isValidTicketId(ticketId: string): boolean {
-  // Format: TKT-YYYYMMDD-XXXX or TKT-{timestamp}
-  const regex = /^TKT-(\d{8}-\d{4}|\d{13})$/;
+  // Format: YYYYDDMMYYYY-XXXX (e.g., 2025131120225-0001)
+  const regex = /^(\d{12}-\d{4}|\d{13}-\d{4})$/;
   return regex.test(ticketId);
 }
 
@@ -59,16 +59,16 @@ export function isValidTicketId(ticketId: string): boolean {
 export function extractDateFromTicketId(ticketId: string): Date | null {
   try {
     const parts = ticketId.split('-');
-    if (parts.length !== 3 || parts[0] !== 'TKT') {
+    if (parts.length !== 2) {
       return null;
     }
 
-    const dateStr = parts[1];
-    if (dateStr.length === 8) {
-      // Format: YYYYMMDD
+    const dateStr = parts[0];
+    if (dateStr.length === 12) {
+      // Format: YYYYDDMMYYYY
       const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
-      const day = parseInt(dateStr.substring(6, 8));
+      const day = parseInt(dateStr.substring(4, 6));
+      const month = parseInt(dateStr.substring(6, 8)) - 1; // Month is 0-indexed
       return new Date(year, month, day);
     } else if (dateStr.length === 13) {
       // Timestamp fallback

@@ -1,6 +1,6 @@
-# Certificate Management System - IPFS & Blockchain
+# Krida e-Pramaan - IPFS & Blockchain
 
-A secure, decentralized certificate management system that leverages IPFS for storage and blockchain for immutable verification.
+A secure, decentralized certificate management system for sports achievements that leverages IPFS for storage and blockchain for immutable verification.
 
 ## Features
 

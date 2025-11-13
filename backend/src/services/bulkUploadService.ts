@@ -3,6 +3,7 @@ import { certificateService } from './certificateService';
 import { pdfService } from './pdfService';
 import { emailService } from './emailService';
 import { logger } from '../utils/logger';
+import { generateCertificateNumber } from '../utils/certificateNumberGenerator';
 import path from 'path';
 import fs from 'fs';
 
@@ -141,7 +142,7 @@ class BulkUploadService {
 
           // Insert into athlete_competitions table (NOT generating certificate)
           const recordId = uuidv4();
-          const certificateNo = extractedData.certificateNo || `CERT-${Date.now()}-${i}`;
+          const certificateNo = extractedData.certificateNo || await generateCertificateNumber();
 
           await query(`
             INSERT INTO athlete_competitions (

@@ -63,7 +63,7 @@ class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const mailOptions = {
-        from: process.env.EMAIL_FROM || '"Certificate Management System" <noreply@certmanagement.com>',
+        from: process.env.EMAIL_FROM || '"Krida e-Pramaan" <noreply@certmanagement.com>',
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -194,9 +194,9 @@ class EmailService {
           <p><strong>Important:</strong> This certificate has been secured using blockchain technology and IPFS storage, ensuring its authenticity and immutability.</p>
 
           <div class="footer">
-            <p>This is an automated email from the Certificate Management System.</p>
+            <p>This is an automated email from Krida e-Pramaan.</p>
             <p>Please do not reply to this email. For support, contact your administrator.</p>
-            <p>&copy; ${new Date().getFullYear()} Certificate Management System. All rights reserved.</p>
+            <p>&copy; ${new Date().getFullYear()} Krida e-Pramaan. All rights reserved.</p>
           </div>
         </div>
       </body>

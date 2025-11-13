@@ -12,8 +12,9 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            font-size: 14px;
+            background: linear-gradient(135deg, #861f41 0%, #6b1833 100%);
             min-height: 100vh;
             padding: 2rem 1rem;
         }
@@ -48,7 +49,7 @@
         }
 
         .btn-logout {
-            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
+            background: linear-gradient(135deg, #861f41 0%, #6b1833 100%);
             color: white;
             border: none;
             padding: 0.75rem 1.5rem;
@@ -61,7 +62,7 @@
 
         .btn-logout:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(255, 107, 157, 0.3);
+            box-shadow: 0 10px 20px rgba(134, 31, 65, 0.3);
         }
 
         .search-container {
@@ -83,8 +84,8 @@
 
         .search-input:focus {
             outline: none;
-            border-color: #ff6b9d;
-            box-shadow: 0 0 0 3px rgba(255, 107, 157, 0.1);
+            border-color: #861f41;
+            box-shadow: 0 0 0 3px rgba(134, 31, 65, 0.1);
         }
 
         .certificates-container {
@@ -119,8 +120,8 @@
         }
 
         .certificate-card:hover {
-            border-color: #ff6b9d;
-            box-shadow: 0 5px 15px rgba(255, 107, 157, 0.2);
+            border-color: #861f41;
+            box-shadow: 0 5px 15px rgba(134, 31, 65, 0.2);
         }
 
         .certificate-header {
@@ -198,7 +199,7 @@
         }
 
         .btn-view {
-            background: #ff6b9d;
+            background: #861f41;
             color: white;
         }
 
@@ -208,12 +209,12 @@
         }
 
         .btn-download {
-            background: #28a745;
+            background: #861f41;
             color: white;
         }
 
         .btn-download:hover {
-            background: #218838;
+            background: #6b1833;
             transform: translateY(-1px);
         }
 
@@ -255,7 +256,7 @@
             width: 50px;
             height: 50px;
             border: 4px solid #f3f3f3;
-            border-top-color: #ff6b9d;
+            border-top-color: #861f41;
             border-radius: 50%;
             animation: spin 1s linear infinite;
             margin: 0 auto 1rem;
@@ -301,7 +302,7 @@
         }
 
         .modal-header {
-            background: linear-gradient(135deg, #ff6b9d 0%, #c44569 100%);
+            background: linear-gradient(135deg, #861f41 0%, #6b1833 100%);
             padding: 2rem;
             border-radius: 20px 20px 0 0;
             color: white;
@@ -398,6 +399,7 @@
             }
         }
     </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -429,16 +431,16 @@
             <div class="certificates-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
                 <h2>My Competition Records (<span id="certificateCount">0</span>)</h2>
                 <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
-                    <button class="btn" style="background: #ff6b9d; color: white;" onclick="showIssuedCertificates()">
+                    <button class="btn" style="background: #861f41; color: white;" onclick="showIssuedCertificates()">
                         Issued Certificates
                     </button>
-                    <button class="btn" style="background: #28a745; color: white;" onclick="showCertificateRequests()">
+                    <button class="btn" style="background: #861f41; color: white;" onclick="showCertificateRequests()">
                         My Requests
                     </button>
-                    <button class="btn" style="background: #ff6b6b; color: white;" onclick="showAppeals()">
+                    <button class="btn" style="background: #861f41; color: white;" onclick="showAppeals()">
                         My Appeals
                     </button>
-                    <button class="btn" style="background: #ff9800; color: white;" onclick="showTrackComplaintModal()">
+                    <button class="btn" style="background: #861f41; color: white;" onclick="showTrackComplaintModal()">
                         Track Complaint
                     </button>
                 </div>
@@ -656,11 +658,11 @@
                             Download Certificate
                         </button>
                     ` : `
-                        <button class="btn" style="background: #28a745; color: white;" onclick="generateAndDownloadCertificate('${record.id}')">
+                        <button class="btn" style="background: #861f41; color: white;" onclick="generateAndDownloadCertificate('${record.id}')">
                             Generate & Download
                         </button>
                     `}
-                    <button class="btn" style="background: #ff6b6b; color: white;" onclick="raiseComplaintForRecord('${record.id}', '${record.certificateHash || ''}')">
+                    <button class="btn" style="background: #861f41; color: white;" onclick="raiseComplaintForRecord('${record.id}', '${record.certificateHash || ''}')">
                         Raise Complaint
                     </button>
                 </div>
@@ -1076,7 +1078,7 @@
             modalBody.innerHTML = `
                 <div class="detail-row">
                     <div class="detail-label">Athlete Name</div>
-                    <div class="detail-value" style="font-weight: 600; color: #ff6b9d;">${escapeHtml(record.fullName || 'N/A')}</div>
+                    <div class="detail-value" style="font-weight: 600; color: #861f41;">${escapeHtml(record.fullName || 'N/A')}</div>
                 </div>
                 <div class="detail-row">
                     <div class="detail-label">Game/Sport</div>
@@ -1245,7 +1247,7 @@
                                 <div style="margin-bottom:10px;"><strong>Issuer:</strong> ${escapeHtml(cert.issuerName || 'N/A')}</div>
                                 ${isCancelled ? `<div style="margin-top:15px;padding:12px;background:#f8d7da;border-left:4px solid #dc3545;border-radius:8px;color:#721c24;"><strong>⚠️ This certificate has been cancelled and is no longer valid.</strong></div>` : ''}
                                 <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
-                                    <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#ff6b9d;color:white;border:none;border-radius:6px;cursor:pointer;">Download</button>
+                                    <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#861f41;color:white;border:none;border-radius:6px;cursor:pointer;">Download</button>
                                     <button onclick="window.open('/api/certificates/verify/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">Validate</button>
                                     <button onclick="document.getElementById('issuedCertsOverlay').remove();raiseComplaint('${cert.certHash}')" style="padding:8px 16px;background:#ff6b6b;color:white;border:none;border-radius:6px;cursor:pointer;">Raise Complaint</button>
                                 </div>
@@ -1339,7 +1341,7 @@
                                 ${req.adminNotes ? `<div style="margin-top:15px;padding:15px;background:#e7f3ff;border-radius:8px;"><strong>Admin Notes:</strong> ${escapeHtml(req.adminNotes)}</div>` : ''}
                                 ${req.status === 'approved' && req.certificateHash ? `
                                     <div style="margin-top:15px;display:flex;gap:10px;">
-                                        <button onclick="window.open('/api/certificates/download/${req.certificateHash}', '_blank')" style="padding:8px 16px;background:#ff6b9d;color:white;border:none;border-radius:6px;cursor:pointer;">Download Certificate</button>
+                                        <button onclick="window.open('/api/certificates/download/${req.certificateHash}', '_blank')" style="padding:8px 16px;background:#861f41;color:white;border:none;border-radius:6px;cursor:pointer;">Download Certificate</button>
                                     </div>
                                 ` : ''}
                                 ${canAppeal ? `
