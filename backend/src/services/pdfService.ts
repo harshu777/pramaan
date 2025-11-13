@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit';
 import { logger } from '../utils/logger';
 import path from 'path';
 import fs from 'fs';
+import QRCode from 'qrcode';
 
 interface CertificateData {
   name: string;
@@ -155,7 +156,31 @@ class PDFService {
           doc.fontSize(9).text(data.applicableGovtResolutions, leftMargin, 658, { width: fieldWidth });
         }
 
-        // QR Code removed as per requirements
+        // Generate and add QR code for validation
+        if (data.certHash) {
+          try {
+            const validationUrl = `https://pramaan.0-4.nl/static/validation.html?hash=${data.certHash}`;
+            const qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
+              errorCorrectionLevel: 'M',
+              type: 'image/png',
+              width: 100,
+              margin: 1
+            });
+
+            // Convert data URL to buffer
+            const qrBuffer = Buffer.from(qrCodeDataUrl.split(',')[1], 'base64');
+
+            // Add QR code to bottom left of certificate
+            doc.image(qrBuffer, 50, 700, { width: 80, height: 80 });
+
+            // Add small text below QR code
+            doc.fontSize(7)
+               .fillColor('#666666')
+               .text('Scan to validate', 50, 785, { width: 80, align: 'center' });
+          } catch (error) {
+            logger.error('QR code generation error:', error);
+          }
+        }
 
         // Digital signature indicator - positioned on the right, below signature and above Deputy Director
         if (data.digitalSignature) {
