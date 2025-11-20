@@ -63,134 +63,126 @@ class PDFService {
         }
 
         // Now overlay text on the template at specific positions
-        // All text moved 20px down
-        const leftMargin = 280;  // Start position for field values (after labels)
-        const rightMargin = pageWidth - 45;
+        // Aligned with the new certificate template
+        const leftMargin = 240;  // Start position for field values (80 + 160 = moved right by 160px)
+        const rightMargin = pageWidth - 40;
         const fieldWidth = rightMargin - leftMargin;
 
-        // Certificate Number and Date (top area)
-        doc.fontSize(10)
+        // Set default font and color
+        doc.fontSize(11)
            .fillColor('#000000')
            .font('Helvetica');
 
+        // Certificate Number (top left - "No.DSYS/SRVC") - moved left by 150px total
         if (data.certificateNo) {
-          doc.text(data.certificateNo, 100, 278, { width: 150 });
+          doc.fontSize(10).text(data.certificateNo, 130, 297, { width: 200 });
         }
 
+        // Date (top right) - ensure it's visible
         if (data.issueDate) {
-          doc.text(data.issueDate, 455, 278, { width: 150 });
+          doc.fontSize(10).text(data.issueDate, 480, 297, { width: 100, align: 'left' });
         }
 
-        // Name of the Sports Person - Line 1
+        // Name of the Sports Person - Line 1 (moved right by 160px, up by 10px)
         if (data.name) {
-          doc.fontSize(10).text(data.name, leftMargin, 298, { width: fieldWidth });
+          doc.fontSize(11).text(data.name, leftMargin, 335, { width: fieldWidth });
         }
 
-        // Son/Wife/Daughter of - Line 2
+        // Son/Wife/Daughter of - Line 2 (moved right by 160px, up by 10px)
         if (data.fatherName) {
-          doc.text(data.fatherName, leftMargin, 322, { width: fieldWidth });
+          doc.text(data.fatherName, leftMargin, 359, { width: fieldWidth });
         }
 
-        // Date of Birth - Line 3
+        // Date of Birth - Line 3 (up by 1px additional)
         if (data.dob) {
-          doc.text(data.dob, leftMargin, 345, { width: fieldWidth });
+          doc.text(data.dob, leftMargin, 382, { width: fieldWidth });
         }
 
-        // Resident of District - Line 4
+        // Resident of District - Line 4 (up by 2px more)
         if (data.district) {
-          doc.text(data.district, leftMargin, 368, { width: fieldWidth });
+          doc.text(data.district, leftMargin, 403, { width: fieldWidth });
         }
 
-        // Representing District - Line 5
+        // Representing(District/Division/State/Country) - Line 5 (up by 2px more)
         if (data.representingDistrict) {
-          doc.text(data.representingDistrict, leftMargin, 391, { width: fieldWidth });
+          doc.text(data.representingDistrict, leftMargin, 426, { width: fieldWidth });
         }
 
-        // District/Division/State/Country - Line 6
-        if (data.divisionStateCountry) {
-          doc.text(data.divisionStateCountry, leftMargin, 415, { width: fieldWidth });
-        }
-
-        // Name of the Game - Line 7
+        // Name of the Game - Line 6 (up by 4px more)
         if (data.gameName) {
-          doc.text(data.gameName, leftMargin, 438, { width: fieldWidth });
+          doc.text(data.gameName, leftMargin, 446, { width: fieldWidth });
         }
 
-        // Name of the Competition - Line 8
+        // Name of the Competition - Line 7 (up by 4px more)
         if (data.competitionName) {
-          doc.text(data.competitionName, leftMargin, 461, { width: fieldWidth });
+          doc.text(data.competitionName, leftMargin, 470, { width: fieldWidth });
         }
 
-        // Period of the Competition - Line 9
+        // Period of the Competition - Line 8 (up by 5px more)
         if (data.competitionPeriod) {
-          doc.text(data.competitionPeriod, leftMargin, 484, { width: fieldWidth });
+          doc.text(data.competitionPeriod, leftMargin, 493, { width: fieldWidth });
         }
 
-        // Competition Held at - Line 10
+        // Competition Held at - Line 9 (up by 4px more)
         if (data.competitionHeldAt) {
-          doc.text(data.competitionHeldAt, leftMargin, 507, { width: fieldWidth });
+          doc.text(data.competitionHeldAt, leftMargin, 518, { width: fieldWidth });
         }
 
-        // Competition Level - Line 11
+        // Competition Level(State/National/International) - Line 10 (up by 4px more)
         if (data.competitionLevel) {
-          doc.text(data.competitionLevel, leftMargin, 531, { width: fieldWidth });
+          doc.text(data.competitionLevel, leftMargin, 545, { width: fieldWidth });
         }
 
-        // Position Obtained - Line 12
+        // Position Obtained - Line 11 (up by 4px more)
         if (data.positionObtained) {
-          doc.text(data.positionObtained, leftMargin, 577, { width: fieldWidth });
+          doc.text(data.positionObtained, leftMargin, 569, { width: fieldWidth });
         }
 
-        // Certificate No. (appears again in the form) - Line 13
+        // Certificate No. (appears again in the form) - Line 12 (up by 2px more)
         if (data.certificateNo) {
-          doc.text(data.certificateNo, leftMargin, 600, { width: fieldWidth });
+          doc.text(data.certificateNo, leftMargin, 595, { width: fieldWidth });
         }
 
-        // Valid for employment to Group - Line 14
+        // Valid for employment to Group - Line 13 (up by 2px more)
         if (data.validForEmploymentGroup) {
-          doc.text(data.validForEmploymentGroup, leftMargin, 623, { width: fieldWidth });
+          doc.text(data.validForEmploymentGroup, leftMargin, 620, { width: fieldWidth });
         }
 
-        // Applicable Government Resolutions - Line 15
+        // Applicable Government/Resolutions - Line 14 (up by 2px more)
         if (data.applicableGovtResolutions) {
-          doc.fontSize(9).text(data.applicableGovtResolutions, leftMargin, 658, { width: fieldWidth });
+          doc.fontSize(10).text(data.applicableGovtResolutions, leftMargin, 640, { width: fieldWidth });
         }
 
-        // Generate and add QR code for validation
+        // Generate and add QR code for validation (10% smaller)
         if (data.certHash) {
           try {
             const validationUrl = `https://pramaan.0-4.nl/static/validation.html?hash=${data.certHash}`;
             const qrCodeDataUrl = await QRCode.toDataURL(validationUrl, {
               errorCorrectionLevel: 'M',
               type: 'image/png',
-              width: 100,
+              width: 120,
               margin: 1
             });
 
             // Convert data URL to buffer
             const qrBuffer = Buffer.from(qrCodeDataUrl.split(',')[1], 'base64');
 
-            // Add QR code to bottom left of certificate
-            doc.image(qrBuffer, 50, 700, { width: 80, height: 80 });
-
-            // Add small text below QR code
-            doc.fontSize(7)
-               .fillColor('#666666')
-               .text('Scan to validate', 50, 785, { width: 80, align: 'center' });
+            // Add QR code - 10% smaller (90 -> 81)
+            doc.image(qrBuffer, pageWidth - 470, pageHeight - 160, { width: 81, height: 81 });
           } catch (error) {
             logger.error('QR code generation error:', error);
           }
         }
 
-        // Digital signature indicator - positioned on the right, below signature and above Deputy Director
+        // Digital signature indicator - moved down by 15px (20px down, then 5px up)
         if (data.digitalSignature) {
           doc.fontSize(7)
              .fillColor('#0066cc')
-             .text(`Digital Signature: ${data.digitalSignature.algorithm}`, 420, 722, { width: 150 });
+             .text(`Digital Signature: ${data.digitalSignature.algorithm}`, 420, 705, { width: 150 });
 
           doc.fontSize(7)
              .fillColor('#666666')
-             .text(`Timestamp: ${new Date(data.digitalSignature.timestamp).toLocaleString('en-IN')}`, 420, 734, { width: 150 });
+             .text(`Timestamp: ${new Date(data.digitalSignature.timestamp).toLocaleString('en-IN')}`, 430, 717, { width: 150 });
         }
 
         // Note: Signature section, disclaimer, and footer text are already part of the template image

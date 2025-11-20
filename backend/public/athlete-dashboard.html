@@ -406,6 +406,7 @@
         <!-- Header -->
         <div class="header">
             <div class="header-info">
+                <img src="/static/epramaan-logo.jpg" alt="e-Pramaan Logo" style="max-width: 150px; height: auto; margin-bottom: 0.5rem;">
                 <h1>Welcome, <span id="athleteName">Athlete</span></h1>
                 <p>Manage and verify your certificates</p>
             </div>
@@ -435,7 +436,7 @@
                         Issued Certificates
                     </button>
                     <button class="btn" style="background: #861f41; color: white;" onclick="showCertificateRequests()">
-                        My Requests
+                        Request Certificate
                     </button>
                     <button class="btn" style="background: #861f41; color: white;" onclick="showAppeals()">
                         My Appeals
@@ -1036,7 +1037,7 @@
                     // Show ticket ID in a more prominent way
                     if (result.ticketId) {
                         setTimeout(() => {
-                            alert(`✅ Complaint Submitted Successfully!\n\n🎫 Your Ticket ID: ${result.ticketId}\n\nPlease save this Ticket ID for tracking your complaint status.`);
+                            alert(`✅ Complaint Submitted Successfully!\n\n🎫 Your Complaint ID: ${result.ticketId}\n\nPlease save this Complaint ID for tracking your complaint status.`);
                         }, 300);
                     }
 
@@ -1247,9 +1248,9 @@
                                 <div style="margin-bottom:10px;"><strong>Issuer:</strong> ${escapeHtml(cert.issuerName || 'N/A')}</div>
                                 ${isCancelled ? `<div style="margin-top:15px;padding:12px;background:#f8d7da;border-left:4px solid #dc3545;border-radius:8px;color:#721c24;"><strong>⚠️ This certificate has been cancelled and is no longer valid.</strong></div>` : ''}
                                 <div style="margin-top:15px;display:flex;gap:10px;flex-wrap:wrap;">
-                                    <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#861f41;color:white;border:none;border-radius:6px;cursor:pointer;">Download</button>
-                                    <button onclick="window.open('/api/certificates/verify/${cert.certHash}', '_blank')" style="padding:8px 16px;background:#28a745;color:white;border:none;border-radius:6px;cursor:pointer;">Validate</button>
-                                    <button onclick="document.getElementById('issuedCertsOverlay').remove();raiseComplaint('${cert.certHash}')" style="padding:8px 16px;background:#ff6b6b;color:white;border:none;border-radius:6px;cursor:pointer;">Raise Complaint</button>
+                                    <button onclick="window.open('/api/certificates/download/${cert.certHash}', '_blank')" style="padding:8px 16px;background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 2px 4px rgba(134, 31, 65, 0.3);">Download</button>
+                                    <button onclick="window.open('/api/certificates/verify/${cert.certHash}', '_blank')" style="padding:8px 16px;background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 2px 4px rgba(134, 31, 65, 0.3);">Validate</button>
+                                    <button onclick="document.getElementById('issuedCertsOverlay').remove();raiseComplaint('${cert.certHash}')" style="padding:8px 16px;background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);color:white;border:none;border-radius:6px;cursor:pointer;box-shadow:0 2px 4px rgba(134, 31, 65, 0.3);">Raise Complaint</button>
                                 </div>
                             </div>
                         `;
@@ -1614,7 +1615,7 @@
 
         // TRACK COMPLAINT BY TICKET ID FUNCTIONS
         function showTrackComplaintModal() {
-            const ticketId = prompt('Enter your Ticket ID (e.g., TKT-20250104-0001):');
+            const ticketId = prompt('Enter your Complaint ID (e.g., 04012025-001):');
 
             if (!ticketId || ticketId.trim() === '') {
                 return;
@@ -1661,7 +1662,7 @@
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
                                 <div>
                                     <h2 style="margin:0;">Complaint Details</h2>
-                                    <p style="margin:5px 0 0 0;color:#666;font-size:0.95em;">Ticket ID: ${escapeHtml(complaint.ticket_id)}</p>
+                                    <p style="margin:5px 0 0 0;color:#666;font-size:0.95em;">Complaint ID: ${escapeHtml(complaint.ticket_id)}</p>
                                 </div>
                                 <button onclick="document.getElementById('complaintDetailsOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
                             </div>

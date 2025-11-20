@@ -22,7 +22,7 @@
         .header {
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 15px 30px;
+            padding: 0 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -521,7 +521,9 @@
 <body>
     <!-- Header -->
     <div class="header">
-        <div class="logo">📜 Krida e-Pramaan</div>
+        <div class="logo" style="display: flex; align-items: center; gap: 10px; margin-left: 30px;">
+            <img src="/static/epramaan-logo.jpg" alt="e-Pramaan Logo" style="height: 168px; width: auto;">
+        </div>
         <div class="header-right">
             <a href="/static/bulk-upload.html" class="btn btn-primary" id="bulkUploadBtn">Bulk Upload</a>
             <div class="user-menu">
@@ -551,10 +553,6 @@
                 <li onclick="filterByFolder('active')">
                     ✅ Active
                     <span class="folder-count" id="countActive">0</span>
-                </li>
-                <li onclick="filterByFolder('expired')">
-                    ⏰ Expired
-                    <span class="folder-count" id="countExpired">0</span>
                 </li>
                 <li onclick="filterByFolder('cancelled')">
                     ❌ Cancelled / Invalid
@@ -598,10 +596,6 @@
                 <div class="stat-card">
                     <div class="stat-value" id="activeCerts">0</div>
                     <div class="stat-label">Active</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="expiredCerts">0</div>
-                    <div class="stat-label">Expired</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-value" id="cancelledCerts">0</div>
@@ -1992,25 +1986,25 @@
 
                             <!-- Statistics -->
                             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:25px;">
-                                <div style="background:#f8f9fa;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#333;">${stats.total || 0}</div>
-                                    <div style="color:#666;font-size:14px;">Total</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${stats.total || 0}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Total</div>
                                 </div>
-                                <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#856404;">${stats.pending || 0}</div>
-                                    <div style="color:#666;font-size:14px;">Pending</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${stats.pending || 0}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Pending</div>
                                 </div>
-                                <div style="background:#cfe2ff;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#084298;">${stats.in_progress || 0}</div>
-                                    <div style="color:#666;font-size:14px;">In Progress</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${stats.in_progress || 0}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">In Progress</div>
                                 </div>
-                                <div style="background:#d1e7dd;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#0f5132;">${stats.resolved || 0}</div>
-                                    <div style="color:#666;font-size:14px;">Resolved</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${stats.resolved || 0}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Resolved</div>
                                 </div>
-                                <div style="background:#f8d7da;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#842029;">${stats.rejected || 0}</div>
-                                    <div style="color:#666;font-size:14px;">Rejected</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${stats.rejected || 0}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Rejected</div>
                                 </div>
                             </div>
 
@@ -2031,7 +2025,7 @@
                                 <table id="complaintsTable" style="width:100%;border-collapse:collapse;">
                                     <thead>
                                         <tr style="background:#f5f5f5;text-align:left;">
-                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Ticket ID</th>
+                                            <th style="padding:12px;border-bottom:2px solid #ddd;">Complaint ID</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Date</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Name</th>
                                             <th style="padding:12px;border-bottom:2px solid #ddd;">Email</th>
@@ -2556,21 +2550,21 @@
                             </div>
 
                             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px;">
-                                <div style="background:#f8f9fa;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#333;">${records.length}</div>
-                                    <div style="color:#666;font-size:14px;">Total Records</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${records.length}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Total Records</div>
                                 </div>
-                                <div style="background:#fff3cd;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#856404;">${unclaimedCount}</div>
-                                    <div style="color:#666;font-size:14px;">Unclaimed</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${unclaimedCount}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Unclaimed</div>
                                 </div>
-                                <div style="background:#d1e7dd;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#0f5132;">${claimedCount}</div>
-                                    <div style="color:#666;font-size:14px;">Claimed</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${claimedCount}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Claimed</div>
                                 </div>
-                                <div style="background:#cfe2ff;padding:15px;border-radius:8px;text-align:center;">
-                                    <div style="font-size:28px;font-weight:bold;color:#084298;">${records.filter(r => r.certificateIssued).length}</div>
-                                    <div style="color:#666;font-size:14px;">Certificates Issued</div>
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${records.filter(r => r.certificateIssued).length}</div>
+                                    <div style="color:rgba(255,255,255,0.9);font-size:14px;">Certificates Issued</div>
                                 </div>
                             </div>
 
