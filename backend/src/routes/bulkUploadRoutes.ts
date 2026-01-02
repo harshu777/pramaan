@@ -160,22 +160,19 @@ router.get('/template',
 
       const templateData = [
         {
-          'Name': 'John Doe',
-          'Father Name': 'James Doe',
-          'DOB': '01/01/1990',
-          'District': 'Mumbai',
-          'Game Name': 'Kho Kho',
-          'Competition Period': '01/01/2024 - 05/01/2024',
-          'Competition Name': 'National Championship',
-          'Competition Held At': 'Mumbai Stadium',
-          'Competition Level': 'National',
-          'Certificate No': 'CERT-001',
-          'Representing District': 'Mumbai',
-          'Division/State/Country': 'Maharashtra',
+          'Name of the Sports Person': 'John Doe',
+          'Son/Daughter/Wife of': 'James Doe',
+          'Date of Birth': '01/01/1990',
+          'Resident of District': 'Mumbai',
+          'Representing (District/Division/State/Country)': 'Mumbai / Maharashtra / India',
+          'Name of the Game': 'Kho Kho',
+          'Name of the Competition': 'National Championship',
+          'Period of the Competition': '01/01/2024 - 05/01/2024',
+          'Competition Held at': 'Mumbai Stadium',
+          'Competition Level (State/National/International)': 'National',
           'Position Obtained': '1st',
-          'Valid For Employment Group': 'Group A',
-          'Applicable Govt Resolutions': 'GR-123/2024',
-          'Email': 'john.doe@example.com'
+          'Certificate No.': 'CERT-001',
+          'Applicable Government Resolution': 'GR-123/2024'
         }
       ];
 

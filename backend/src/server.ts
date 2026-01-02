@@ -18,6 +18,7 @@ import adminRoutes from './routes/adminRoutes';
 import userManagementRoutes from './routes/userManagementRoutes';
 import authRoutes from './routes/authRoutes';
 import documentRoutes from './routes/documentRoutes';
+import samlRoutes from './routes/samlRoutes';
 import { initializeDatabase } from './config/database-sqlite';
 import { initializeBlockchain } from './services/blockchainService';
 
@@ -32,6 +33,13 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.'
 });
 
+// Higher rate limit for bulk upload routes
+const bulkUploadLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
+  max: 3000, // Allow more requests for bulk operations
+  message: 'Too many bulk upload requests, please try again later.'
+});
+
 app.use(helmet({
   contentSecurityPolicy: false,
 }));
@@ -40,6 +48,10 @@ app.use(compression());
 // Increase payload size limit to 50MB for PDF uploads
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Apply higher rate limit for bulk upload routes
+app.use('/api/bulk-upload', bulkUploadLimiter);
+
+// Apply standard rate limit for all other routes
 app.use(limiter);
 
 app.use('/static', express.static('public'));
@@ -61,6 +73,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/user-management', userManagementRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
+app.use('/api/saml', samlRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });

@@ -101,6 +101,53 @@
             cursor: not-allowed;
         }
 
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 1.5rem 0;
+            color: #666;
+            font-size: 0.85rem;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .divider span {
+            padding: 0 1rem;
+        }
+
+        .btn-saml {
+            width: 100%;
+            background: linear-gradient(135deg, #1a73e8 0%, #1557b0 100%);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-saml:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(26, 115, 232, 0.3);
+        }
+
+        .btn-saml svg {
+            width: 20px;
+            height: 20px;
+        }
+
         .error-message {
             background: #fee;
             color: #c33;
@@ -168,12 +215,12 @@
 
             <form id="loginForm">
                 <div class="form-group">
-                    <label for="email">Email Address</label>
+                    <label for="email">Email or Username</label>
                     <input
-                        type="email"
+                        type="text"
                         id="email"
                         name="email"
-                        placeholder="your.email@example.com"
+                        placeholder="Enter your email or username"
                         required
                     >
                 </div>
@@ -194,6 +241,17 @@
                     <div class="loader" id="loader"></div>
                 </button>
             </form>
+
+            <div class="divider">
+                <span>OR</span>
+            </div>
+
+            <button class="btn-saml" onclick="loginWithSAML()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+                Login with Sports Portal (SSO)
+            </button>
 
             <div class="link-container">
                 Don't have an account? <a href="/static/athlete-signup.html">Sign up here</a><br>
@@ -264,6 +322,41 @@
         // Check if already logged in
         if (localStorage.getItem('athleteToken')) {
             window.location.href = '/static/athlete-dashboard.html';
+        }
+
+        // SAML Login function
+        function loginWithSAML() {
+            window.location.href = '/api/saml/login';
+        }
+
+        // Check for SAML error messages in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const samlError = urlParams.get('error');
+        const logout = urlParams.get('logout');
+
+        if (samlError) {
+            const errorDiv = document.getElementById('errorMessage');
+            const errorMessages = {
+                'saml_init_failed': 'Failed to initiate SSO login. Please try again.',
+                'no_saml_response': 'No response received from SSO provider.',
+                'invalid_saml_response': 'Invalid response from SSO provider.',
+                'no_nameid': 'SSO provider did not return user identification.',
+                'saml_validation_failed': 'SSO authentication failed. Please try again.',
+                'assertion_expired': 'SSO session expired. Please try again.',
+                'invalid_signature': 'SSO response signature invalid. Please contact support.'
+            };
+            errorDiv.textContent = errorMessages[samlError] || 'SSO login failed. Please try again.';
+            errorDiv.style.display = 'block';
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        if (logout === 'success') {
+            const successDiv = document.getElementById('successMessage');
+            successDiv.textContent = 'You have been logged out successfully.';
+            successDiv.style.display = 'block';
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
         }
     </script>
 </body>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="https://pramaan.0-4.nl/api/saml/metadata">
+  <md:SPSSODescriptor AuthnRequestsSigned="true" WantAssertionsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <md:KeyDescriptor use="signing">
+      <ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+        <ds:X509Data>
+          <ds:X509Certificate>MIIDUTCCAjmgAwIBAgIUSuxVmA+liC7S1fUZmjhiY1axvHQwDQYJKoZIhvcNAQELBQAwODEXMBUGA1UEAwwOcHJhbWFhbi4wLTQubmwxEDAOBgNVBAoMB1ByYW1hYW4xCzAJBgNVBAYTAklOMB4XDTI1MTIyMzEzNDM1M1oXDTI2MTIyMzEzNDM1M1owODEXMBUGA1UEAwwOcHJhbWFhbi4wLTQubmwxEDAOBgNVBAoMB1ByYW1hYW4xCzAJBgNVBAYTAklOMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtSgxlErCewQrnUaaBLcy+6IngRRQmtSRNN2ISrJbalod3fe3l/nAJyaZ1nriDJa/x8n0j5eNOLyNXtwrwQlDCXEcrpkqvx3CQfhY21Lam9psdSpepVGcvUc5gQA3B9rhpsea1lPVyKwFNyk7Cp1qmukDPz/iqGkrEH+gaUfVKbq/Ohu3Ff2p2VgINgXihnw6eXdh7HdX3M72Y6LUGpDtqcrdcRP1BtlnSjP9RUrVbgZgmRo1AG21oj90kyp2j4bwtpaTUTWd6pg0tps+aQ97cTVGjlWmfxdy0Eq+OeowpBCrASDbyCw64VfJBg3TGZZrpBHHnt+8qy8SqTnYvFTAOQIDAQABo1MwUTAdBgNVHQ4EFgQUW+ZFvNiskvhJSXdzhMKwjjhSiyswHwYDVR0jBBgwFoAUW+ZFvNiskvhJSXdzhMKwjjhSiyswDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEApNjoK6At5EXPH4SFBBTLs10+ValxFZJPmdHPSztN8ths2o36qQfC8FMxkuEMelYQEKs23lP4tMZ2mvgKuiCj+qbtq9SxeMDzTTfQ9lqaRn5upYDdg5SiucZZ4QnVePQl/gEvmdvRxzjCSzXKKhtGguuNao1QqYAyn0o6dS6aVB2PRI7RwMXWWbYXs/II/eF7atjkyNcgptDFV0R4hUOzpiXM0/2IeRunhHr5BAvmoamG3Vc2QK8q6aGtsasDuR93M4kWhEl/1tFZQ673z4nGjTzIgghEGrQCDyARLod4AKVYXONdXzdA7TBfrQEbWZ6WuxAITLnDm5afsf6NVKLErQ==</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </md:KeyDescriptor>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:unspecified</md:NameIDFormat>
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
+    <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://pramaan.0-4.nl/api/saml/acs" index="0" isDefault="true"/>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://pramaan.0-4.nl/api/saml/slo"/>
+  </md:SPSSODescriptor>
+</md:EntityDescriptor>

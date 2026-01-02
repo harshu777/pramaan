@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<md:EntityDescriptor entityID="sports-idp" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+<ds:SignedInfo>
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
+<ds:Reference URI="">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+<ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+<ds:DigestValue>xI++FSIFV+FejBbi/n7ZQc47sbv8wDSVdgGsfs40isw=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue>
+Lm7px4wIwbnB5JyID41EXx/jT3OsOhnhoT1lLJ43TYG2UNqVL4ZxJaR4ssyfbbqCjj/mxFpBJUjD&#xd;
+ArgsvnO+fTwv1h90TLTz4O+1UgO3Ev+VDxMNOIArVnVJ09q3uUb5QfBcZ2idh0lOLzmb1Yy/J1T+&#xd;
+AOX5YY+LHCESnzCO6hetBN3xVWoA9zvZm3hbyoJ4q238SucJjXg8fkofE7cF0Vm/rJzLbo5AuEKH&#xd;
+6NztR5pWoJhMzg6FdAFLBNk3a29p2pvCgtMCDV9s0ebAG9UP+t3O+2fHo3jYZ5PGJdU7FL0EAzxn&#xd;
+Gsd0ZOC5EsAY9Z+9LDzpXryohmJi5kONqcY2sg==
+</ds:SignatureValue>
+<ds:KeyInfo><ds:X509Data><ds:X509Certificate>MIICoTCCAYkCBgGbEYLApTANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAlTcG9ydHNJRFAwHhcN
+MjUxMjEyMDc0MjE5WhcNMjYxMjAzMDc0MjE5WjAUMRIwEAYDVQQDDAlTcG9ydHNJRFAwggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVQnPWYB2ZbtGQPJ/OiNtSq2i9AXr9U6IIYrUPb6EJ
+TBj64OoXW8sw+qwIbsXLHIicSsQYzhIXgjyiIV/NM/ixsiNHuX0+EOoQw/Fw1x1RfGqxaJ01qo87
+vhkPsov1VcOLi8ItbRS7+OMB6PkDyQV4L+7Z/2AP4DRCxfDgyWY1UWo3cHcFnIOJfacmYvaJCgbf
+qXOZDZBbMWt0b8LWxNkhWkvKJmMKuaSWjfXZXXX/ifEk/bWRy4NKxQ9mCXWJ/YSjEoYWIyxfnxfH
+U2VLGXlj13qlTwq5OZbn1gHjwKKJfTXbg09LzQbsLCigcxdvAPbaTl9NVoJRnoEmKcZQ+VFPAgMB
+AAEwDQYJKoZIhvcNAQELBQADggEBAG9je9OsLK+z2tjG/v9D+e4Tm++9R4dQQpCWlWk3Mkp6BSNZ
+8FEEBxnKXrLQ2Wsuu+MTmEoVERpuhZJJSloGjn/dhpkYGeO+FHbn38tZhH4GLfWl6tFSVycgIA4n
+UrVVkXCyt3N9TWyJ7UIekux2A7LyQ4kdQ6xz4HxeirujRC2Qbq1SCrrBJnPIPYfcLZGoYMFjxhRF
+KyvRMmgTkzIwj0bjYT678IG26b5gnWIVQUxAsHfI4jj3RPNMTb6qk8+pAPfIp6Hi1mtJMP3LnNzU
+esdOfFeHgfVzJGWDwVeMbCJG1PY3aMfz3VHA66t5YI7e2X0P+AePazXvNwd0hAq/q7U=</ds:X509Certificate></ds:X509Data></ds:KeyInfo></ds:Signature><md:IDPSSODescriptor WantAuthnRequestsSigned="true" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:Extensions><alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha384" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:SigningMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha512" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/><alg:SigningMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" xmlns:alg="urn:oasis:names:tc:SAML:metadata:algsupport"/></md:Extensions><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIICoTCCAYkCBgGbEYLApTANBgkqhkiG9w0BAQsFADAUMRIwEAYDVQQDDAlTcG9ydHNJRFAwHhcN
+MjUxMjEyMDc0MjE5WhcNMjYxMjAzMDc0MjE5WjAUMRIwEAYDVQQDDAlTcG9ydHNJRFAwggEiMA0G
+CSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDVQnPWYB2ZbtGQPJ/OiNtSq2i9AXr9U6IIYrUPb6EJ
+TBj64OoXW8sw+qwIbsXLHIicSsQYzhIXgjyiIV/NM/ixsiNHuX0+EOoQw/Fw1x1RfGqxaJ01qo87
+vhkPsov1VcOLi8ItbRS7+OMB6PkDyQV4L+7Z/2AP4DRCxfDgyWY1UWo3cHcFnIOJfacmYvaJCgbf
+qXOZDZBbMWt0b8LWxNkhWkvKJmMKuaSWjfXZXXX/ifEk/bWRy4NKxQ9mCXWJ/YSjEoYWIyxfnxfH
+U2VLGXlj13qlTwq5OZbn1gHjwKKJfTXbg09LzQbsLCigcxdvAPbaTl9NVoJRnoEmKcZQ+VFPAgMB
+AAEwDQYJKoZIhvcNAQELBQADggEBAG9je9OsLK+z2tjG/v9D+e4Tm++9R4dQQpCWlWk3Mkp6BSNZ
+8FEEBxnKXrLQ2Wsuu+MTmEoVERpuhZJJSloGjn/dhpkYGeO+FHbn38tZhH4GLfWl6tFSVycgIA4n
+UrVVkXCyt3N9TWyJ7UIekux2A7LyQ4kdQ6xz4HxeirujRC2Qbq1SCrrBJnPIPYfcLZGoYMFjxhRF
+KyvRMmgTkzIwj0bjYT678IG26b5gnWIVQUxAsHfI4jj3RPNMTb6qk8+pAPfIp6Hi1mtJMP3LnNzU
+esdOfFeHgfVzJGWDwVeMbCJG1PY3aMfz3VHA66t5YI7e2X0P+AePazXvNwd0hAq/q7U=</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://app6.creanttechnologies.com/c/portal/saml/slo"/><md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://app6.creanttechnologies.com/c/portal/saml/slo"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://app6.creanttechnologies.com/c/portal/saml/sso"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://app6.creanttechnologies.com/c/portal/saml/sso"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://pramaan.0-4.nl/api/saml/callback"/></md:IDPSSODescriptor></md:EntityDescriptor>

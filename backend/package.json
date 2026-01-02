@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@node-saml/node-saml": "^5.1.0",
     "@pinata/sdk": "^2.1.0",
     "@types/nodemailer": "^7.0.2",
     "@types/pdfkit": "^0.17.3",

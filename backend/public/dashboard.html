@@ -2509,10 +2509,27 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    alert('Record deleted successfully');
-                    // Close the modal and reopen to refresh the list
-                    document.getElementById('bulkRecordsModalOverlay').remove();
-                    showBulkUploadedRecords();
+                    // Remove from local array
+                    allBulkRecords = allBulkRecords.filter(r => r.id !== recordId);
+
+                    // Update total count display
+                    const totalCountEl = document.getElementById('totalRecordsCount');
+                    if (totalCountEl) {
+                        totalCountEl.textContent = allBulkRecords.length;
+                    }
+
+                    // Re-apply filters and render
+                    filterBulkRecords();
+
+                    // Show success message briefly
+                    const row = document.getElementById(`bulk-record-row-${recordId}`);
+                    if (row) {
+                        row.style.background = '#d4edda';
+                        row.style.transition = 'opacity 0.5s';
+                        setTimeout(() => {
+                            row.style.opacity = '0';
+                        }, 300);
+                    }
                 } else {
                     alert('Error deleting record: ' + result.message);
                 }
@@ -2520,6 +2537,11 @@
                 alert('Error deleting record: ' + error.message);
             }
         }
+
+        // Store bulk records globally for search/filter
+        let allBulkRecords = [];
+        let currentBulkPage = 1;
+        const recordsPerPage = 50;
 
         // Show Bulk Uploaded Records (NEW FEATURE)
         async function showBulkUploadedRecords() {
@@ -2537,21 +2559,22 @@
                 });
 
                 const result = await response.json();
-                const records = result.records || [];
+                allBulkRecords = result.records || [];
                 const unclaimedCount = result.unclaimedCount || 0;
                 const claimedCount = result.claimedCount || 0;
+                currentBulkPage = 1;
 
                 let modalHTML = `
                     <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="bulkRecordsModalOverlay" onclick="if(event.target.id==='bulkRecordsModalOverlay')this.remove()">
                         <div style="background:white;border-radius:10px;padding:30px;max-width:1400px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
                             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
-                                <h2 style="margin:0;">📊 Bulk Upload Records</h2>
+                                <h2 style="margin:0;">Bulk Upload Records</h2>
                                 <button onclick="document.getElementById('bulkRecordsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
                             </div>
 
                             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px;margin-bottom:25px;">
                                 <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
-                                    <div style="font-size:28px;font-weight:bold;color:white;">${records.length}</div>
+                                    <div style="font-size:28px;font-weight:bold;color:white;" id="totalRecordsCount">${allBulkRecords.length}</div>
                                     <div style="color:rgba(255,255,255,0.9);font-size:14px;">Total Records</div>
                                 </div>
                                 <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
@@ -2563,19 +2586,48 @@
                                     <div style="color:rgba(255,255,255,0.9);font-size:14px;">Claimed</div>
                                 </div>
                                 <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:15px;border-radius:8px;text-align:center;box-shadow:0 4px 6px rgba(134, 31, 65, 0.2);">
-                                    <div style="font-size:28px;font-weight:bold;color:white;">${records.filter(r => r.certificateIssued).length}</div>
+                                    <div style="font-size:28px;font-weight:bold;color:white;">${allBulkRecords.filter(r => r.certificateIssued).length}</div>
                                     <div style="color:rgba(255,255,255,0.9);font-size:14px;">Certificates Issued</div>
                                 </div>
                             </div>
 
-                            <div style="margin-bottom:20px;padding:15px;background:#e7f3ff;border-left:4px solid #004085;border-radius:5px;">
-                                <strong>ℹ️ Info:</strong> These records were uploaded via bulk upload. Athletes can claim them by registering with matching details.
+                            <!-- Search and Filter Section -->
+                            <div style="margin-bottom:20px;display:flex;gap:15px;flex-wrap:wrap;align-items:center;">
+                                <div style="flex:1;min-width:250px;">
+                                    <input type="text" id="bulkRecordsSearch" placeholder="Search by name, game, competition, certificate no..."
+                                           style="width:100%;padding:12px 15px;border:2px solid #ddd;border-radius:8px;font-size:14px;"
+                                           onkeyup="filterBulkRecords()">
+                                </div>
+                                <div>
+                                    <select id="bulkRecordsStatusFilter" onchange="filterBulkRecords()" style="padding:12px 15px;border:2px solid #ddd;border-radius:8px;font-size:14px;min-width:150px;">
+                                        <option value="all">All Status</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="requested">Requested</option>
+                                        <option value="issued">Issued</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <select id="bulkRecordsClaimFilter" onchange="filterBulkRecords()" style="padding:12px 15px;border:2px solid #ddd;border-radius:8px;font-size:14px;min-width:150px;">
+                                        <option value="all">All Records</option>
+                                        <option value="claimed">Claimed Only</option>
+                                        <option value="unclaimed">Unclaimed Only</option>
+                                    </select>
+                                </div>
+                                <button onclick="filterBulkRecords()" style="padding:12px 20px;background:#861f41;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:500;">
+                                    Search
+                                </button>
+                            </div>
+
+                            <div style="margin-bottom:15px;padding:10px 15px;background:#f8f9fa;border-radius:5px;display:flex;justify-content:space-between;align-items:center;">
+                                <span id="filteredCountInfo">Showing ${Math.min(recordsPerPage, allBulkRecords.length)} of ${allBulkRecords.length} records</span>
+                                <div id="paginationControls"></div>
                             </div>
 
                             <div style="overflow-x:auto;">
                                 <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
                                     <thead>
                                         <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;">S.No</th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">Name</th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">DOB</th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">Game</th>
@@ -2588,47 +2640,6 @@
                                         </tr>
                                     </thead>
                                     <tbody id="bulkRecordsTableBody">
-                `;
-
-                if (records.length === 0) {
-                    modalHTML += '<tr><td colspan="9" style="padding:30px;text-align:center;color:#999;">No bulk upload records found</td></tr>';
-                } else {
-                    records.forEach(record => {
-                        const statusLabel = record.certificateIssued ? 'Issued' : record.certificateRequested ? 'Requested' : 'Pending';
-                        const statusColor = record.certificateIssued ? '#d1e7dd' : record.certificateRequested ? '#fff3cd' : '#f8d7da';
-
-                        modalHTML += `
-                            <tr style="border-bottom:1px solid #eee;">
-                                <td style="padding:10px;">${record.fullName}</td>
-                                <td style="padding:10px;">${record.dob || 'N/A'}</td>
-                                <td style="padding:10px;">${record.gameName || 'N/A'}</td>
-                                <td style="padding:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${record.competitionName || 'N/A'}">${record.competitionName || 'N/A'}</td>
-                                <td style="padding:10px;">${record.positionObtained || 'N/A'}</td>
-                                <td style="padding:10px;">${record.certificateNo || 'N/A'}</td>
-                                <td style="padding:10px;">
-                                    <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${statusLabel}</span>
-                                </td>
-                                <td style="padding:10px;">
-                                    ${record.linkedAthlete ? `
-                                        <div style="font-size:0.85em;">
-                                            <div>${record.linkedAthlete.name}</div>
-                                            <div style="color:#666;font-size:0.9em;">${record.linkedAthlete.email}</div>
-                                        </div>
-                                    ` : '<span style="color:#999;">Unclaimed</span>'}
-                                </td>
-                                <td style="padding:10px;">
-                                    ${!record.athleteId && !record.certificateIssued ? `
-                                        <button onclick="deleteBulkRecord('${record.id}', '${record.fullName}')" style="padding:5px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">
-                                            Delete
-                                        </button>
-                                    ` : '<span style="color:#999;font-size:0.85em;">-</span>'}
-                                </td>
-                            </tr>
-                        `;
-                    });
-                }
-
-                modalHTML += `
                                     </tbody>
                                 </table>
                             </div>
@@ -2637,8 +2648,202 @@
                 `;
 
                 document.body.insertAdjacentHTML('beforeend', modalHTML);
+                renderBulkRecordsTable(allBulkRecords);
             } catch (error) {
                 alert('Error loading bulk upload records: ' + error.message);
+            }
+        }
+
+        // Filter bulk records based on search and filters
+        function filterBulkRecords() {
+            const searchTerm = document.getElementById('bulkRecordsSearch').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('bulkRecordsStatusFilter').value;
+            const claimFilter = document.getElementById('bulkRecordsClaimFilter').value;
+
+            let filtered = allBulkRecords.filter(record => {
+                // Search filter
+                const matchesSearch = !searchTerm ||
+                    (record.fullName && record.fullName.toLowerCase().includes(searchTerm)) ||
+                    (record.gameName && record.gameName.toLowerCase().includes(searchTerm)) ||
+                    (record.competitionName && record.competitionName.toLowerCase().includes(searchTerm)) ||
+                    (record.certificateNo && record.certificateNo.toLowerCase().includes(searchTerm)) ||
+                    (record.district && record.district.toLowerCase().includes(searchTerm)) ||
+                    (record.positionObtained && record.positionObtained.toLowerCase().includes(searchTerm));
+
+                // Status filter
+                let matchesStatus = true;
+                if (statusFilter === 'issued') {
+                    matchesStatus = record.certificateIssued;
+                } else if (statusFilter === 'requested') {
+                    matchesStatus = record.certificateRequested && !record.certificateIssued;
+                } else if (statusFilter === 'pending') {
+                    matchesStatus = !record.certificateRequested && !record.certificateIssued;
+                }
+
+                // Claim filter
+                let matchesClaim = true;
+                if (claimFilter === 'claimed') {
+                    matchesClaim = !!record.athleteId;
+                } else if (claimFilter === 'unclaimed') {
+                    matchesClaim = !record.athleteId;
+                }
+
+                return matchesSearch && matchesStatus && matchesClaim;
+            });
+
+            currentBulkPage = 1;
+            renderBulkRecordsTable(filtered);
+        }
+
+        // Render bulk records table with pagination
+        function renderBulkRecordsTable(records) {
+            const tbody = document.getElementById('bulkRecordsTableBody');
+            const totalPages = Math.ceil(records.length / recordsPerPage);
+            const startIndex = (currentBulkPage - 1) * recordsPerPage;
+            const endIndex = Math.min(startIndex + recordsPerPage, records.length);
+            const pageRecords = records.slice(startIndex, endIndex);
+
+            // Update count info
+            const countInfo = document.getElementById('filteredCountInfo');
+            if (countInfo) {
+                countInfo.textContent = `Showing ${startIndex + 1}-${endIndex} of ${records.length} records`;
+            }
+
+            // Render pagination
+            renderPagination(totalPages, records.length);
+
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="10" style="padding:30px;text-align:center;color:#999;">No records found matching your criteria</td></tr>';
+                return;
+            }
+
+            let html = '';
+            pageRecords.forEach((record, index) => {
+                const statusLabel = record.certificateIssued ? 'Issued' : record.certificateRequested ? 'Requested' : 'Pending';
+                const statusColor = record.certificateIssued ? '#d1e7dd' : record.certificateRequested ? '#fff3cd' : '#f8d7da';
+                const serialNo = startIndex + index + 1;
+
+                html += `
+                    <tr style="border-bottom:1px solid #eee;" id="bulk-record-row-${record.id}">
+                        <td style="padding:10px;color:#666;">${serialNo}</td>
+                        <td style="padding:10px;font-weight:500;">${record.fullName || 'N/A'}</td>
+                        <td style="padding:10px;">${record.dob || 'N/A'}</td>
+                        <td style="padding:10px;">${record.gameName || 'N/A'}</td>
+                        <td style="padding:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${record.competitionName || 'N/A'}">${record.competitionName || 'N/A'}</td>
+                        <td style="padding:10px;">${record.positionObtained || 'N/A'}</td>
+                        <td style="padding:10px;">${record.certificateNo || 'N/A'}</td>
+                        <td style="padding:10px;">
+                            <span style="background:${statusColor};padding:4px 8px;border-radius:4px;font-size:0.85em;font-weight:600;">${statusLabel}</span>
+                        </td>
+                        <td style="padding:10px;">
+                            ${record.linkedAthlete ? `
+                                <div style="font-size:0.85em;">
+                                    <div>${record.linkedAthlete.name}</div>
+                                    <div style="color:#666;font-size:0.9em;">${record.linkedAthlete.email || ''}</div>
+                                </div>
+                            ` : '<span style="color:#999;">Unclaimed</span>'}
+                        </td>
+                        <td style="padding:10px;">
+                            ${!record.athleteId && !record.certificateIssued ? `
+                                <button onclick="deleteBulkRecord('${record.id}', '${(record.fullName || '').replace(/'/g, "\\'")}')" style="padding:5px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">
+                                    Delete
+                                </button>
+                            ` : '<span style="color:#999;font-size:0.85em;">-</span>'}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        // Render pagination controls
+        function renderPagination(totalPages, totalRecords) {
+            const container = document.getElementById('paginationControls');
+            if (!container || totalPages <= 1) {
+                if (container) container.innerHTML = '';
+                return;
+            }
+
+            let html = '<div style="display:flex;gap:5px;align-items:center;">';
+
+            // Previous button
+            html += `<button onclick="changeBulkPage(${currentBulkPage - 1})"
+                     style="padding:5px 10px;border:1px solid #ddd;background:${currentBulkPage === 1 ? '#f5f5f5' : 'white'};border-radius:4px;cursor:${currentBulkPage === 1 ? 'not-allowed' : 'pointer'};"
+                     ${currentBulkPage === 1 ? 'disabled' : ''}>Prev</button>`;
+
+            // Page numbers
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentBulkPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+            if (endPage - startPage < maxVisiblePages - 1) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+
+            if (startPage > 1) {
+                html += `<button onclick="changeBulkPage(1)" style="padding:5px 10px;border:1px solid #ddd;background:white;border-radius:4px;cursor:pointer;">1</button>`;
+                if (startPage > 2) html += '<span style="padding:0 5px;">...</span>';
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                html += `<button onclick="changeBulkPage(${i})"
+                         style="padding:5px 10px;border:1px solid ${i === currentBulkPage ? '#861f41' : '#ddd'};background:${i === currentBulkPage ? '#861f41' : 'white'};color:${i === currentBulkPage ? 'white' : 'black'};border-radius:4px;cursor:pointer;">${i}</button>`;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) html += '<span style="padding:0 5px;">...</span>';
+                html += `<button onclick="changeBulkPage(${totalPages})" style="padding:5px 10px;border:1px solid #ddd;background:white;border-radius:4px;cursor:pointer;">${totalPages}</button>`;
+            }
+
+            // Next button
+            html += `<button onclick="changeBulkPage(${currentBulkPage + 1})"
+                     style="padding:5px 10px;border:1px solid #ddd;background:${currentBulkPage === totalPages ? '#f5f5f5' : 'white'};border-radius:4px;cursor:${currentBulkPage === totalPages ? 'not-allowed' : 'pointer'};"
+                     ${currentBulkPage === totalPages ? 'disabled' : ''}>Next</button>`;
+
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        // Change page for bulk records
+        function changeBulkPage(page) {
+            const searchTerm = document.getElementById('bulkRecordsSearch').value.toLowerCase().trim();
+            const statusFilter = document.getElementById('bulkRecordsStatusFilter').value;
+            const claimFilter = document.getElementById('bulkRecordsClaimFilter').value;
+
+            // Apply filters to get current filtered records
+            let filtered = allBulkRecords.filter(record => {
+                const matchesSearch = !searchTerm ||
+                    (record.fullName && record.fullName.toLowerCase().includes(searchTerm)) ||
+                    (record.gameName && record.gameName.toLowerCase().includes(searchTerm)) ||
+                    (record.competitionName && record.competitionName.toLowerCase().includes(searchTerm)) ||
+                    (record.certificateNo && record.certificateNo.toLowerCase().includes(searchTerm)) ||
+                    (record.district && record.district.toLowerCase().includes(searchTerm)) ||
+                    (record.positionObtained && record.positionObtained.toLowerCase().includes(searchTerm));
+
+                let matchesStatus = true;
+                if (statusFilter === 'issued') {
+                    matchesStatus = record.certificateIssued;
+                } else if (statusFilter === 'requested') {
+                    matchesStatus = record.certificateRequested && !record.certificateIssued;
+                } else if (statusFilter === 'pending') {
+                    matchesStatus = !record.certificateRequested && !record.certificateIssued;
+                }
+
+                let matchesClaim = true;
+                if (claimFilter === 'claimed') {
+                    matchesClaim = !!record.athleteId;
+                } else if (claimFilter === 'unclaimed') {
+                    matchesClaim = !record.athleteId;
+                }
+
+                return matchesSearch && matchesStatus && matchesClaim;
+            });
+
+            const totalPages = Math.ceil(filtered.length / recordsPerPage);
+            if (page >= 1 && page <= totalPages) {
+                currentBulkPage = page;
+                renderBulkRecordsTable(filtered);
             }
         }
     </script>

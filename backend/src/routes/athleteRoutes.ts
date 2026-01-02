@@ -117,12 +117,15 @@ router.post('/login', asyncHandler(async (req: Request, res: Response) => {
   if (!email || !password) {
     return res.status(400).json({
       success: false,
-      message: 'Email and password are required'
+      message: 'Email/Username and password are required'
     });
   }
 
-  // Find athlete
-  const result = await query('SELECT * FROM athletes WHERE email = ?', [email]);
+  // Find athlete by email, unique_id, saml_name_id, or full_name
+  const result = await query(
+    'SELECT * FROM athletes WHERE email = ? OR unique_id = ? OR saml_name_id = ? OR full_name = ?',
+    [email, email, email, email]
+  );
 
   if (result.rows.length === 0) {
     return res.status(401).json({

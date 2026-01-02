@@ -60,10 +60,12 @@ export async function initializeDatabase(): Promise<void> {
         email TEXT UNIQUE NOT NULL,
         phone_number TEXT,
         dob TEXT,
-        password_hash TEXT NOT NULL,
+        password_hash TEXT,
         district TEXT,
         state TEXT,
         father_name TEXT,
+        saml_name_id TEXT UNIQUE,
+        saml_provider TEXT,
         is_active BOOLEAN DEFAULT 1,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -132,15 +134,19 @@ export async function initializeDatabase(): Promise<void> {
         representing_district TEXT,
         division_state_country TEXT,
         game_name TEXT,
+        game_code TEXT,
+        age_group_code TEXT,
+        gender_code TEXT,
         competition_name TEXT NOT NULL,
         competition_type TEXT NOT NULL,
         competition_period TEXT,
+        period_of_completion_from TEXT,
+        period_of_completion_to TEXT,
         competition_held_at TEXT,
         competition_level TEXT,
         position_obtained TEXT,
         certificate_no TEXT,
         valid_for_employment_group TEXT,
-        applicable_govt_resolutions TEXT,
         event_name TEXT,
         position INTEGER,
         medal_type TEXT,
@@ -228,6 +234,42 @@ export async function initializeDatabase(): Promise<void> {
       CREATE INDEX IF NOT EXISTS idx_new_appeals_request ON appeals(request_id);
       CREATE INDEX IF NOT EXISTS idx_new_appeals_status ON appeals(status);
     `);
+
+    // Migration: Add SAML columns to existing athletes table if they don't exist
+    try {
+      await db.run(`ALTER TABLE athletes ADD COLUMN saml_name_id TEXT UNIQUE`);
+      logger.info('Added saml_name_id column to athletes table');
+    } catch (e: any) {
+      // Ignore "duplicate column" error - column already exists
+    }
+
+    try {
+      await db.run(`ALTER TABLE athletes ADD COLUMN saml_provider TEXT`);
+      logger.info('Added saml_provider column to athletes table');
+    } catch (e: any) {
+      // Ignore "duplicate column" error - column already exists
+    }
+
+    // Create SAML index after migration ensures the column exists
+    await db.exec(`CREATE INDEX IF NOT EXISTS idx_athlete_saml_name_id ON athletes(saml_name_id);`);
+
+    // Migration: Add new columns to athlete_competitions table
+    const newCompetitionColumns = [
+      { name: 'game_code', type: 'TEXT' },
+      { name: 'age_group_code', type: 'TEXT' },
+      { name: 'gender_code', type: 'TEXT' },
+      { name: 'period_of_completion_from', type: 'TEXT' },
+      { name: 'period_of_completion_to', type: 'TEXT' }
+    ];
+
+    for (const col of newCompetitionColumns) {
+      try {
+        await db.run(`ALTER TABLE athlete_competitions ADD COLUMN ${col.name} ${col.type}`);
+        logger.info(`Added ${col.name} column to athlete_competitions table`);
+      } catch (e: any) {
+        // Ignore "duplicate column" error - column already exists
+      }
+    }
 
     // Insert default admin user with hashed password
     const bcrypt = require('bcrypt');

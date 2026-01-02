@@ -8,44 +8,57 @@ import path from 'path';
 import fs from 'fs';
 
 interface ExcelRow {
-  'SR. NO'?: number;
+  // Primary column names (as per template)
+  'Name of the Sports Person'?: string;
+  "Father's Name / Spouse's Name"?: string;
+  'Date of Birth'?: string;
+  'Resident of District'?: string;
+  'Representing (District/Division/State/Country)'?: string;
+  'Name of the Game'?: string;
+  'Game Code'?: string;
+  'Age Group Code'?: string;
+  'Gender Code'?: string;
+  'Name of the Competition'?: string;
+  'Period of Completion FROM'?: string;
+  'Period of Completion TO'?: string;
+  'Competition Held at'?: string;
+  'Competition Level (State/National/International)'?: string;
+  'Position Obtained'?: string;
+  'Certificate No.'?: string;
+  'Valid for Employment Group'?: string;
+  // Alternative/legacy column names for backward compatibility
   'Name'?: string;
+  'NAME'?: string;
   'Father Name'?: string;
+  'FATHER NAME'?: string;
+  'Son/Daughter/Wife of'?: string;
+  'Son/Wife/Daughter of'?: string;
   'DOB'?: string;
   'District'?: string;
+  'DISTRICT'?: string;
   'Game Name'?: string;
-  'Competition Period'?: string;
+  'GAME NAME'?: string;
+  'GAME CODE'?: string;
+  'AGE GROUP CODE'?: string;
+  'GENDER CODE'?: string;
   'Competition Name'?: string;
+  'COMPETITION NAME'?: string;
+  'Period of the Competition'?: string;
+  'Competition Period'?: string;
+  'COMPETITION PERIOD'?: string;
+  'PERIOD OF COMPLETION FROM'?: string;
+  'PERIOD OF COMPLETION TO'?: string;
   'Competition Held At'?: string;
+  'COMPETITION HELD AT'?: string;
   'Competition Level'?: string;
+  'COMPETITION LEVEL'?: string;
   'Certificate No'?: string;
+  'CERTIFICATE NO'?: string;
   'Representing District'?: string;
   'Division/State/Country'?: string;
-  'Position Obtained'?: string;
-  'Valid For Employment Group'?: string;
-  'Applicable Govt Resolutions'?: string;
-  'Email'?: string;
-  // Alternative column names
-  'NAME'?: string;
-  'FATHER NAME'?: string;
-  'EMAIL'?: string;
-  'DISTRICT'?: string;
-  'GAME NAME'?: string;
-  'COMPETITION PERIOD'?: string;
-  'COMPETITION NAME'?: string;
-  'COMPETITION HELD AT'?: string;
-  'COMPETITION LEVEL'?: string;
-  'CERTIFICATE NO'?: string;
-  'REPRESENTING DISTRICT'?: string;
-  'DIVISION/STATE/COUNTRY'?: string;
   'POSITION OBTAINED'?: string;
   'VALID FOR EMPLOYMENT GROUP'?: string;
-  'APPLICABLE GOVT RESOLUTIONS'?: string;
-  'Son/Wife/Daughter of'?: string;
-  'Resident of District'?: string;
-  'Name of the Game'?: string;
-  'Period of the Competition'?: string;
-  'Name of the Competition'?: string;
+  'Valid For Employment Group'?: string;
 }
 
 interface BulkUploadResult {
@@ -71,23 +84,35 @@ class BulkUploadService {
 
   private extractDataFromRow(row: ExcelRow): any {
     // Normalize and extract data with multiple possible column names
+    // Primary fields use new template names, with fallback to legacy names
+    const representing = row['Representing (District/Division/State/Country)'] || '';
+
+    // Handle Period of Completion - new format uses FROM/TO, legacy uses single period field
+    const periodFrom = row['Period of Completion FROM'] || row['PERIOD OF COMPLETION FROM'] || '';
+    const periodTo = row['Period of Completion TO'] || row['PERIOD OF COMPLETION TO'] || '';
+    const legacyPeriod = row['Period of the Competition'] || row['Competition Period'] || row['COMPETITION PERIOD'] || '';
+
     return {
-      name: row['Name'] || row['NAME'] || '',
-      fatherName: row['Father Name'] || row['FATHER NAME'] || row['Son/Wife/Daughter of'] || '',
-      dob: row['DOB'] || '',
-      district: row['District'] || row['DISTRICT'] || row['Resident of District'] || '',
-      gameName: row['Game Name'] || row['GAME NAME'] || row['Name of the Game'] || '',
-      competitionPeriod: row['Competition Period'] || row['COMPETITION PERIOD'] || row['Period of the Competition'] || '',
-      competitionName: row['Competition Name'] || row['COMPETITION NAME'] || row['Name of the Competition'] || '',
-      competitionHeldAt: row['Competition Held At'] || row['COMPETITION HELD AT'] || '',
-      competitionLevel: row['Competition Level'] || row['COMPETITION LEVEL'] || '',
-      certificateNo: row['Certificate No'] || row['CERTIFICATE NO'] || '',
-      representingDistrict: row['Representing District'] || row['REPRESENTING DISTRICT'] || '',
-      divisionStateCountry: row['Division/State/Country'] || row['DIVISION/STATE/COUNTRY'] || '',
+      name: row['Name of the Sports Person'] || row['Name'] || row['NAME'] || '',
+      fatherName: row["Father's Name / Spouse's Name"] || row['Son/Daughter/Wife of'] || row['Son/Wife/Daughter of'] || row['Father Name'] || row['FATHER NAME'] || '',
+      dob: row['Date of Birth'] || row['DOB'] || '',
+      district: row['Resident of District'] || row['District'] || row['DISTRICT'] || '',
+      gameName: row['Name of the Game'] || row['Game Name'] || row['GAME NAME'] || '',
+      gameCode: row['Game Code'] || row['GAME CODE'] || '',
+      ageGroupCode: row['Age Group Code'] || row['AGE GROUP CODE'] || '',
+      genderCode: row['Gender Code'] || row['GENDER CODE'] || '',
+      periodOfCompletionFrom: periodFrom,
+      periodOfCompletionTo: periodTo,
+      competitionPeriod: legacyPeriod || (periodFrom && periodTo ? `${periodFrom} - ${periodTo}` : ''),
+      competitionName: row['Name of the Competition'] || row['Competition Name'] || row['COMPETITION NAME'] || '',
+      competitionHeldAt: row['Competition Held at'] || row['Competition Held At'] || row['COMPETITION HELD AT'] || '',
+      competitionLevel: row['Competition Level (State/National/International)'] || row['Competition Level'] || row['COMPETITION LEVEL'] || '',
+      certificateNo: row['Certificate No.'] || row['Certificate No'] || row['CERTIFICATE NO'] || '',
+      representing: representing,
+      representingDistrict: row['Representing District'] || '',
+      divisionStateCountry: row['Division/State/Country'] || '',
       positionObtained: row['Position Obtained'] || row['POSITION OBTAINED'] || '',
-      validForEmploymentGroup: row['Valid For Employment Group'] || row['VALID FOR EMPLOYMENT GROUP'] || '',
-      applicableGovtResolutions: row['Applicable Govt Resolutions'] || row['APPLICABLE GOVT RESOLUTIONS'] || '',
-      email: row['Email'] || row['EMAIL'] || ''
+      validForEmploymentGroup: row['Valid for Employment Group'] || row['Valid For Employment Group'] || row['VALID FOR EMPLOYMENT GROUP'] || ''
     };
   }
 
@@ -142,16 +167,21 @@ class BulkUploadService {
 
           // Insert into athlete_competitions table (NOT generating certificate)
           const recordId = uuidv4();
-          const certificateNo = extractedData.certificateNo || await generateCertificateNumber();
+          const certificateNo = extractedData.certificateNo || await generateCertificateNumber(extractedData.gameCode, extractedData.ageGroupCode);
+
+          // Handle representing field - use combined field or fall back to legacy separate fields
+          const representingValue = extractedData.representing || extractedData.representingDistrict || '';
+          const divisionStateCountryValue = extractedData.representing ? '' : (extractedData.divisionStateCountry || '');
 
           await query(`
             INSERT INTO athlete_competitions (
               id, unique_id, aadhar_number, full_name, father_name, dob, district,
-              representing_district, division_state_country, game_name, competition_name,
-              competition_type, competition_period, competition_held_at, competition_level,
-              position_obtained, certificate_no, valid_for_employment_group,
-              applicable_govt_resolutions, certificate_issued, certificate_requested
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              representing_district, division_state_country, game_name, game_code,
+              age_group_code, gender_code, competition_name, competition_type,
+              competition_period, period_of_completion_from, period_of_completion_to,
+              competition_held_at, competition_level, position_obtained, certificate_no,
+              valid_for_employment_group, certificate_issued, certificate_requested
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `, [
             recordId,
             null, // unique_id will be filled when athlete registers
@@ -160,18 +190,22 @@ class BulkUploadService {
             extractedData.fatherName,
             extractedData.dob,
             extractedData.district,
-            extractedData.representingDistrict,
-            extractedData.divisionStateCountry,
+            representingValue,
+            divisionStateCountryValue,
             extractedData.gameName,
+            extractedData.gameCode,
+            extractedData.ageGroupCode,
+            extractedData.genderCode,
             extractedData.competitionName,
             issuerData.certificateType,
             extractedData.competitionPeriod,
+            extractedData.periodOfCompletionFrom,
+            extractedData.periodOfCompletionTo,
             extractedData.competitionHeldAt,
             extractedData.competitionLevel,
             extractedData.positionObtained,
             certificateNo,
             extractedData.validForEmploymentGroup,
-            extractedData.applicableGovtResolutions,
             0, // certificate_issued = false
             0  // certificate_requested = false
           ]);
@@ -256,25 +290,16 @@ class BulkUploadService {
       // Get column names
       const columns = Object.keys(data[0]);
 
-      // Check for required columns
-      const requiredColumns = ['Name', 'NAME', 'name'];
+      // Check for required columns - support both new and legacy column names
+      const requiredColumns = ['Name of the Sports Person', 'Name', 'NAME', 'name'];
       const hasNameColumn = columns.some(col => requiredColumns.includes(col));
 
       if (!hasNameColumn) {
-        errors.push('Missing required column: Name');
-      }
-
-      // Check for email column (warning if missing)
-      const emailColumns = ['Email', 'EMAIL', 'email'];
-      const hasEmailColumn = columns.some(col => emailColumns.includes(col));
-
-      if (!hasEmailColumn) {
-        warnings.push('No email column found - certificates will not be sent via email');
+        errors.push('Missing required column: Name of the Sports Person');
       }
 
       // Validate each row
       let rowsWithoutName = 0;
-      let rowsWithInvalidEmail = 0;
 
       data.forEach((row, index) => {
         const extractedData = this.extractDataFromRow(row);
@@ -282,18 +307,10 @@ class BulkUploadService {
         if (!extractedData.name) {
           rowsWithoutName++;
         }
-
-        if (extractedData.email && !this.isValidEmail(extractedData.email)) {
-          rowsWithInvalidEmail++;
-        }
       });
 
       if (rowsWithoutName > 0) {
         warnings.push(`${rowsWithoutName} rows have missing names`);
-      }
-
-      if (rowsWithInvalidEmail > 0) {
-        warnings.push(`${rowsWithInvalidEmail} rows have invalid email addresses`);
       }
 
       return {
