@@ -578,6 +578,9 @@
                     <li onclick="showComplaintsSupport()">
                         🎧 Support / Complaints
                     </li>
+                    <li onclick="showReports()">
+                        📈 Reports
+                    </li>
                     <li onclick="window.open('/static/validation.html', '_blank')">
                         🔍 Public Validation
                     </li>
@@ -2844,6 +2847,207 @@
             if (page >= 1 && page <= totalPages) {
                 currentBulkPage = page;
                 renderBulkRecordsTable(filtered);
+            }
+        }
+
+        // Show Reports Section
+        async function showReports() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                // Fetch all reports in parallel
+                const [gameWiseRes, ageWiseRes, genderWiseRes, summaryRes] = await Promise.all([
+                    fetch(`${API_BASE}/reports/game-wise`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/reports/age-wise`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/reports/gender-wise`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/reports/summary`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+
+                const gameWise = await gameWiseRes.json();
+                const ageWise = await ageWiseRes.json();
+                const genderWise = await genderWiseRes.json();
+                const summary = await summaryRes.json();
+
+                const summaryData = summary.summary || {};
+
+                let modalHTML = `
+                    <div style="position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;display:flex;align-items:center;justify-content:center;overflow-y:auto;" id="reportsModalOverlay" onclick="if(event.target.id==='reportsModalOverlay')this.remove()">
+                        <div style="background:white;border-radius:10px;padding:30px;max-width:1400px;width:95%;max-height:90vh;overflow-y:auto;margin:20px;" onclick="event.stopPropagation()">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;border-bottom:2px solid #f0f0f0;padding-bottom:15px;">
+                                <h2 style="margin:0;">Reports Dashboard</h2>
+                                <button onclick="document.getElementById('reportsModalOverlay').remove()" style="padding:5px 15px;background:#666;color:white;border:none;border-radius:5px;cursor:pointer;font-size:20px;">×</button>
+                            </div>
+
+                            <!-- Summary Cards -->
+                            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:30px;">
+                                <div style="background:linear-gradient(135deg, #861f41 0%, #6b1833 100%);padding:20px;border-radius:8px;text-align:center;color:white;">
+                                    <div style="font-size:28px;font-weight:bold;">${summaryData.total_records || 0}</div>
+                                    <div style="font-size:13px;opacity:0.9;">Total Records</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #28a745 0%, #1e7e34 100%);padding:20px;border-radius:8px;text-align:center;color:white;">
+                                    <div style="font-size:28px;font-weight:bold;">${summaryData.certificates_issued || 0}</div>
+                                    <div style="font-size:13px;opacity:0.9;">Certificates Issued</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #ffc107 0%, #d39e00 100%);padding:20px;border-radius:8px;text-align:center;color:white;">
+                                    <div style="font-size:28px;font-weight:bold;">${summaryData.certificates_requested || 0}</div>
+                                    <div style="font-size:13px;opacity:0.9;">Certificates Requested</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);padding:20px;border-radius:8px;text-align:center;color:white;">
+                                    <div style="font-size:28px;font-weight:bold;">${summaryData.unique_athletes || 0}</div>
+                                    <div style="font-size:13px;opacity:0.9;">Unique Athletes</div>
+                                </div>
+                                <div style="background:linear-gradient(135deg, #6f42c1 0%, #59359a 100%);padding:20px;border-radius:8px;text-align:center;color:white;">
+                                    <div style="font-size:28px;font-weight:bold;">${summaryData.unique_games || 0}</div>
+                                    <div style="font-size:13px;opacity:0.9;">Unique Games</div>
+                                </div>
+                            </div>
+
+                            <!-- Report Tabs -->
+                            <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:2px solid #eee;padding-bottom:10px;">
+                                <button onclick="showReportTab('game')" id="tabGame" style="padding:10px 20px;background:#861f41;color:white;border:none;border-radius:5px 5px 0 0;cursor:pointer;font-weight:500;">Game Code Wise</button>
+                                <button onclick="showReportTab('age')" id="tabAge" style="padding:10px 20px;background:#ddd;color:#333;border:none;border-radius:5px 5px 0 0;cursor:pointer;font-weight:500;">Age Group Wise</button>
+                                <button onclick="showReportTab('gender')" id="tabGender" style="padding:10px 20px;background:#ddd;color:#333;border:none;border-radius:5px 5px 0 0;cursor:pointer;font-weight:500;">Gender Wise</button>
+                            </div>
+
+                            <!-- Game Code Wise Report -->
+                            <div id="reportGame" style="display:block;">
+                                <h3 style="margin-bottom:15px;color:#333;">Game Code Wise Report</h3>
+                                <div style="overflow-x:auto;">
+                                    <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;text-align:left;">
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">S.No</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Game Code</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Game Name</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Total Records</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Issued</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Requested</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Unique Athletes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(gameWise.report || []).map((row, idx) => `
+                                                <tr style="border-bottom:1px solid #eee;">
+                                                    <td style="padding:10px;">${idx + 1}</td>
+                                                    <td style="padding:10px;font-weight:bold;color:#861f41;">${row.game_code || '-'}</td>
+                                                    <td style="padding:10px;">${row.game_name || '-'}</td>
+                                                    <td style="padding:10px;">${row.total_records || 0}</td>
+                                                    <td style="padding:10px;color:#28a745;font-weight:bold;">${row.certificates_issued || 0}</td>
+                                                    <td style="padding:10px;color:#ffc107;font-weight:bold;">${row.certificates_requested || 0}</td>
+                                                    <td style="padding:10px;">${row.unique_athletes || 0}</td>
+                                                </tr>
+                                            `).join('') || '<tr><td colspan="7" style="padding:20px;text-align:center;color:#666;">No data available</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Age Group Wise Report -->
+                            <div id="reportAge" style="display:none;">
+                                <h3 style="margin-bottom:15px;color:#333;">Age Group Wise Report</h3>
+                                <div style="overflow-x:auto;">
+                                    <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;text-align:left;">
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">S.No</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Age Group Code</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Total Records</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Issued</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Requested</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Unique Athletes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(ageWise.report || []).map((row, idx) => `
+                                                <tr style="border-bottom:1px solid #eee;">
+                                                    <td style="padding:10px;">${idx + 1}</td>
+                                                    <td style="padding:10px;font-weight:bold;color:#861f41;">${row.age_group_code || '-'}</td>
+                                                    <td style="padding:10px;">${row.total_records || 0}</td>
+                                                    <td style="padding:10px;color:#28a745;font-weight:bold;">${row.certificates_issued || 0}</td>
+                                                    <td style="padding:10px;color:#ffc107;font-weight:bold;">${row.certificates_requested || 0}</td>
+                                                    <td style="padding:10px;">${row.unique_athletes || 0}</td>
+                                                </tr>
+                                            `).join('') || '<tr><td colspan="6" style="padding:20px;text-align:center;color:#666;">No data available</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Gender Wise Report -->
+                            <div id="reportGender" style="display:none;">
+                                <h3 style="margin-bottom:15px;color:#333;">Gender Wise Report</h3>
+                                <div style="overflow-x:auto;">
+                                    <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
+                                        <thead>
+                                            <tr style="background:#f5f5f5;text-align:left;">
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">S.No</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Gender Code</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Gender</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Total Records</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Issued</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Certificates Requested</th>
+                                                <th style="padding:12px;border-bottom:2px solid #ddd;">Unique Athletes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${(genderWise.report || []).map((row, idx) => `
+                                                <tr style="border-bottom:1px solid #eee;">
+                                                    <td style="padding:10px;">${idx + 1}</td>
+                                                    <td style="padding:10px;font-weight:bold;color:#861f41;">${row.gender_code || '-'}</td>
+                                                    <td style="padding:10px;">${row.gender_name || row.gender_code || '-'}</td>
+                                                    <td style="padding:10px;">${row.total_records || 0}</td>
+                                                    <td style="padding:10px;color:#28a745;font-weight:bold;">${row.certificates_issued || 0}</td>
+                                                    <td style="padding:10px;color:#ffc107;font-weight:bold;">${row.certificates_requested || 0}</td>
+                                                    <td style="padding:10px;">${row.unique_athletes || 0}</td>
+                                                </tr>
+                                            `).join('') || '<tr><td colspan="7" style="padding:20px;text-align:center;color:#666;">No data available</td></tr>'}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                `;
+
+                document.body.insertAdjacentHTML('beforeend', modalHTML);
+            } catch (error) {
+                alert('Error loading reports: ' + error.message);
+            }
+        }
+
+        // Switch between report tabs
+        function showReportTab(tab) {
+            // Hide all report sections
+            document.getElementById('reportGame').style.display = 'none';
+            document.getElementById('reportAge').style.display = 'none';
+            document.getElementById('reportGender').style.display = 'none';
+
+            // Reset all tab buttons
+            document.getElementById('tabGame').style.background = '#ddd';
+            document.getElementById('tabGame').style.color = '#333';
+            document.getElementById('tabAge').style.background = '#ddd';
+            document.getElementById('tabAge').style.color = '#333';
+            document.getElementById('tabGender').style.background = '#ddd';
+            document.getElementById('tabGender').style.color = '#333';
+
+            // Show selected tab
+            if (tab === 'game') {
+                document.getElementById('reportGame').style.display = 'block';
+                document.getElementById('tabGame').style.background = '#861f41';
+                document.getElementById('tabGame').style.color = 'white';
+            } else if (tab === 'age') {
+                document.getElementById('reportAge').style.display = 'block';
+                document.getElementById('tabAge').style.background = '#861f41';
+                document.getElementById('tabAge').style.color = 'white';
+            } else if (tab === 'gender') {
+                document.getElementById('reportGender').style.display = 'block';
+                document.getElementById('tabGender').style.background = '#861f41';
+                document.getElementById('tabGender').style.color = 'white';
             }
         }
     </script>

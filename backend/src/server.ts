@@ -19,6 +19,7 @@ import userManagementRoutes from './routes/userManagementRoutes';
 import authRoutes from './routes/authRoutes';
 import documentRoutes from './routes/documentRoutes';
 import samlRoutes from './routes/samlRoutes';
+import reportRoutes from './routes/reportRoutes';
 import { initializeDatabase } from './config/database-sqlite';
 import { initializeBlockchain } from './services/blockchainService';
 
@@ -74,6 +75,7 @@ app.use('/api/user-management', userManagementRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/saml', samlRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', timestamp: new Date().toISOString() });
