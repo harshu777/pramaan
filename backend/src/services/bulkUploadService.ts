@@ -19,8 +19,8 @@ interface ExcelRow {
   'Age Group Code'?: string;
   'Gender Code'?: string;
   'Name of the Competition'?: string;
-  'Period of Completion FROM'?: string;
-  'Period of Completion TO'?: string;
+  'Period of Competition FROM'?: string;
+  'Period of Competition TO'?: string;
   'Competition Held at'?: string;
   'Competition Level (State/National/International)'?: string;
   'Position Obtained'?: string;
@@ -48,6 +48,10 @@ interface ExcelRow {
   'COMPETITION PERIOD'?: string;
   'PERIOD OF COMPLETION FROM'?: string;
   'PERIOD OF COMPLETION TO'?: string;
+  'Period of Completion FROM'?: string;
+  'Period of Completion TO'?: string;
+  'PERIOD OF COMPETITION FROM'?: string;
+  'PERIOD OF COMPETITION TO'?: string;
   'Competition Held At'?: string;
   'COMPETITION HELD AT'?: string;
   'Competition Level'?: string;
@@ -87,9 +91,9 @@ class BulkUploadService {
     // Primary fields use new template names, with fallback to legacy names
     const representing = row['Representing (District/Division/State/Country)'] || '';
 
-    // Handle Period of Completion - new format uses FROM/TO, legacy uses single period field
-    const periodFrom = row['Period of Completion FROM'] || row['PERIOD OF COMPLETION FROM'] || '';
-    const periodTo = row['Period of Completion TO'] || row['PERIOD OF COMPLETION TO'] || '';
+    // Handle Period of Competition - new format uses FROM/TO, legacy uses single period field
+    const periodFrom = row['Period of Competition FROM'] || row['PERIOD OF COMPETITION FROM'] || row['Period of Completion FROM'] || row['PERIOD OF COMPLETION FROM'] || '';
+    const periodTo = row['Period of Competition TO'] || row['PERIOD OF COMPETITION TO'] || row['Period of Completion TO'] || row['PERIOD OF COMPLETION TO'] || '';
     const legacyPeriod = row['Period of the Competition'] || row['Competition Period'] || row['COMPETITION PERIOD'] || '';
 
     return {
