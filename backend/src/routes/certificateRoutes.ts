@@ -256,6 +256,28 @@ router.get('/download/:certHash',
         }
       }
 
+      // Determine certificate numbers for top and bottom fields
+      const storedCertNo = metadata.certificateNo || '';
+      const isExcelFormat = storedCertNo && !storedCertNo.startsWith('DSYS/');
+
+      // For upper left "No." field: always use DSYS format
+      // If we have a stored generatedCertificateNo, use it
+      // If the certificateNo is already DSYS format, use it
+      // Otherwise, generate a new DSYS number
+      let generatedCertNo = metadata.generatedCertificateNo || '';
+      if (!generatedCertNo) {
+        if (storedCertNo.startsWith('DSYS/')) {
+          generatedCertNo = storedCertNo;
+        } else {
+          // Generate a DSYS format number based on game and age group codes if available
+          const { generateCertificateNumber } = await import('../utils/certificateNumberGenerator');
+          generatedCertNo = await generateCertificateNumber(metadata.gameCode, metadata.ageGroupCode);
+        }
+      }
+
+      // For bottom "Certificate No." field: use Excel cert no if available
+      const excelCertNo = isExcelFormat ? storedCertNo : (metadata.excelCertificateNo || undefined);
+
       const pdfData = {
         name: certificate.subject_name,
         fatherName: metadata.fatherName || '',
@@ -263,15 +285,20 @@ router.get('/download/:certHash',
         district: metadata.district || '',
         gameName: metadata.gameName || '',
         competitionPeriod: metadata.competitionPeriod || '',
+        competitionPeriodFrom: metadata.competitionPeriodFrom || '',
+        competitionPeriodTo: metadata.competitionPeriodTo || '',
         competitionName: metadata.competitionName || '',
         competitionHeldAt: metadata.competitionHeldAt || '',
         competitionLevel: metadata.competitionLevel || '',
         certificateNo: metadata.certificateNo || certificate.id,
+        // Upper left "No." field - always use DSYS generated format
+        generatedCertificateNo: generatedCertNo,
+        // Bottom "Certificate No." field - use Excel cert no if available
+        excelCertificateNo: excelCertNo,
         representingDistrict: metadata.representingDistrict || '',
         divisionStateCountry: metadata.divisionStateCountry || '',
         positionObtained: metadata.positionObtained || '',
         validForEmploymentGroup: metadata.validForEmploymentGroup || '',
-        applicableGovtResolutions: metadata.applicableGovtResolutions || '',
         issuerName: certificate.issuer_name,
         issuerTitle: 'Deputy Director',
         organizationName: 'Sports and Youth Services, Maharashtra State',

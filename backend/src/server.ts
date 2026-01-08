@@ -1,3 +1,4 @@
+require('newrelic');
 import express, { Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -30,7 +31,7 @@ const PORT = process.env.PORT || 3000;
 
 const limiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'),
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '1000'),
   message: 'Too many requests from this IP, please try again later.'
 });
 
@@ -52,8 +53,8 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Apply higher rate limit for bulk upload routes
 app.use('/api/bulk-upload', bulkUploadLimiter);
 
-// Apply standard rate limit for all other routes
-app.use(limiter);
+// Rate limiting temporarily disabled for testing
+// app.use(limiter);
 
 app.use('/static', express.static('public'));
 

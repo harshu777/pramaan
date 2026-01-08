@@ -12,5 +12,6 @@
     <md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat>
     <md:AssertionConsumerService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://pramaan.0-4.nl/api/saml/acs" index="0" isDefault="true"/>
     <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://pramaan.0-4.nl/api/saml/slo"/>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location=" https://pramaan.0-4.nl/api/saml/login"/>
   </md:SPSSODescriptor>
 </md:EntityDescriptor>

@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import { certificateService } from '../services/certificateService';
 import { pdfService } from '../services/pdfService';
 import { emailService } from '../services/emailService';
+import { generateCertificateNumber } from '../utils/certificateNumberGenerator';
 
 const router = Router();
 
@@ -123,6 +124,93 @@ router.delete('/bulk-uploaded-records/:recordId', authenticate, asyncHandler(asy
   res.json({
     success: true,
     message: 'Record deleted successfully'
+  });
+}));
+
+// Bulk delete bulk uploaded records
+router.post('/bulk-uploaded-records/bulk-delete', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+  const { recordIds } = req.body;
+
+  if (user.type !== 'issuer') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied - Admin only'
+    });
+  }
+
+  if (!recordIds || !Array.isArray(recordIds) || recordIds.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'recordIds array is required'
+    });
+  }
+
+  const deleted: string[] = [];
+  const failed: { id: string; reason: string }[] = [];
+
+  for (const recordId of recordIds) {
+    try {
+      // Check if record exists
+      const recordResult = await query('SELECT * FROM athlete_competitions WHERE id = ?', [recordId]);
+
+      if (recordResult.rows.length === 0) {
+        failed.push({ id: recordId, reason: 'Record not found' });
+        continue;
+      }
+
+      const record = recordResult.rows[0];
+
+      // Check if record has been claimed or certificate issued
+      if (record.athlete_id || record.certificate_issued) {
+        failed.push({ id: recordId, reason: 'Record has been claimed or certificate issued' });
+        continue;
+      }
+
+      // Delete the record
+      await query('DELETE FROM athlete_competitions WHERE id = ?', [recordId]);
+      deleted.push(recordId);
+    } catch (error) {
+      failed.push({ id: recordId, reason: error instanceof Error ? error.message : 'Unknown error' });
+    }
+  }
+
+  logger.info(`Bulk delete: ${deleted.length} records deleted, ${failed.length} failed by ${user.username || user.name}`);
+
+  res.json({
+    success: true,
+    message: `Deleted ${deleted.length} records, ${failed.length} failed`,
+    deletedCount: deleted.length,
+    failedCount: failed.length,
+    deleted,
+    failed
+  });
+}));
+
+// Delete all unclaimed bulk uploaded records
+router.delete('/bulk-uploaded-records/delete-all-unclaimed', authenticate, asyncHandler(async (req: Request, res: Response) => {
+  const user = (req as any).user;
+
+  if (user.type !== 'issuer') {
+    return res.status(403).json({
+      success: false,
+      message: 'Access denied - Admin only'
+    });
+  }
+
+  // Delete all records that are not claimed and don't have certificates issued
+  const result = await query(
+    'DELETE FROM athlete_competitions WHERE (athlete_id IS NULL OR athlete_id = "") AND certificate_issued = 0'
+  );
+
+  const deletedCount = result.rowCount || 0;
+
+  logger.info(`Bulk delete all unclaimed: ${deletedCount} records deleted by ${user.username || user.name}`);
+
+  res.json({
+    success: true,
+    message: `Deleted ${deletedCount} unclaimed records`,
+    deletedCount
   });
 }));
 
@@ -243,7 +331,14 @@ router.post('/approve-request/:requestId', authenticate, asyncHandler(async (req
   }
 
   try {
-    // Generate certificate
+    // Generate the DSYS format certificate number for upper left "No." field BEFORE issuing certificate
+    const generatedCertNo = await generateCertificateNumber(request.game_code, request.age_group_code);
+
+    // Check if the stored certificate_no is from Excel (not in DSYS format) or was generated
+    const storedCertNo = request.certificate_no || '';
+    const isExcelCertNo = storedCertNo && !storedCertNo.startsWith('DSYS/');
+
+    // Generate certificate with metadata including generated certificate number
     const certificateData = {
       issuerDid: 'admin',
       issuerName: user.name || 'Directorate of Sports and Youth Services',
@@ -257,12 +352,18 @@ router.post('/approve-request/:requestId', authenticate, asyncHandler(async (req
         representingDistrict: request.representing_district,
         divisionStateCountry: request.division_state_country,
         gameName: request.game_name,
+        gameCode: request.game_code,
+        ageGroupCode: request.age_group_code,
         competitionName: request.competition_name,
         competitionPeriod: request.competition_period,
+        competitionPeriodFrom: request.period_of_completion_from,
+        competitionPeriodTo: request.period_of_completion_to,
         competitionHeldAt: request.competition_held_at,
         competitionLevel: request.competition_level,
         positionObtained: request.position_obtained,
         certificateNo: request.certificate_no,
+        generatedCertificateNo: generatedCertNo,
+        excelCertificateNo: isExcelCertNo ? storedCertNo : undefined,
         validForEmploymentGroup: request.valid_for_employment_group,
         applicableGovtResolutions: request.applicable_govt_resolutions
       }
@@ -285,12 +386,17 @@ router.post('/approve-request/:requestId', authenticate, asyncHandler(async (req
       gameName: request.game_name,
       competitionName: request.competition_name,
       competitionPeriod: request.competition_period,
+      competitionPeriodFrom: request.period_of_completion_from,
+      competitionPeriodTo: request.period_of_completion_to,
       competitionHeldAt: request.competition_held_at,
       competitionLevel: request.competition_level,
       positionObtained: request.position_obtained,
       certificateNo: request.certificate_no,
+      // Upper left "No." field - always use DSYS generated format
+      generatedCertificateNo: generatedCertNo,
+      // Bottom "Certificate No." field - use Excel cert no if available, otherwise generated
+      excelCertificateNo: isExcelCertNo ? storedCertNo : undefined,
       validForEmploymentGroup: request.valid_for_employment_group,
-      applicableGovtResolutions: request.applicable_govt_resolutions,
       certHash: certificate.certHash,
       issuerName: user.name || 'Deputy Director',
       issuerTitle: 'Deputy Director',

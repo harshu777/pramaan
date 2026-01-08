@@ -14,8 +14,7 @@
         body {
             font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
-            background: url('/static/login-background.jpeg') no-repeat center center fixed;
-            background-size: cover;
+            background: linear-gradient(135deg, #861f41 0%, #6b1833 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -205,7 +204,7 @@
 <body>
     <div class="login-container">
         <div class="login-header">
-            <img src="/static/pramaan.png" alt="Pramaan Logo" style="max-width: 200px; height: auto; margin-bottom: 1rem;">
+            <img src="/static/login-background.jpeg" alt="Pramaan Logo" style="max-width: 200px; height: auto; margin-bottom: 1rem;">
             <h1>Krida e-Pramaan</h1>
             <p>Athlete Portal - Access Your Certificates</p>
         </div>
@@ -342,6 +341,7 @@
                 'no_saml_response': 'No response received from SSO provider.',
                 'invalid_saml_response': 'Invalid response from SSO provider.',
                 'no_nameid': 'SSO provider did not return user identification.',
+                'no_user_id': 'SSO provider did not return user identification.',
                 'saml_validation_failed': 'SSO authentication failed. Please try again.',
                 'assertion_expired': 'SSO session expired. Please try again.',
                 'invalid_signature': 'SSO response signature invalid. Please contact support.'

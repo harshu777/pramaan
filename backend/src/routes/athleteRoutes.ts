@@ -6,6 +6,7 @@ import { query } from '../config/database-sqlite';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { authenticate } from '../middleware/auth';
 import { logger } from '../utils/logger';
+import { normalizeDateFormat } from '../utils/dateUtils';
 
 const router = Router();
 
@@ -47,38 +48,34 @@ router.post('/signup', asyncHandler(async (req: Request, res: Response) => {
 
   // Auto-map existing competition records to this athlete
   try {
-    // Find and link records based on name, DOB, email, phone, or aadhar (case-insensitive)
-    // First, try exact name match
-    let mappingResult = await query(`
-      UPDATE athlete_competitions
-      SET athlete_id = ?
+    // Normalize DOB for matching
+    const normalizedDob = dob ? normalizeDateFormat(dob) : '';
+
+    // Find unmatched records with matching name (case-insensitive)
+    const unmatchedRecords = await query(`
+      SELECT id, full_name, dob FROM athlete_competitions
       WHERE (athlete_id IS NULL OR athlete_id = '')
         AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
-    `, [athleteId, fullName]);
+    `, [fullName]);
 
-    let recordsMapped = mappingResult.rowCount || 0;
+    let recordsMapped = 0;
 
-    // If DOB is provided, also link records with matching name and DOB
-    if (dob) {
-      const dobMappingResult = await query(`
-        UPDATE athlete_competitions
-        SET athlete_id = ?
-        WHERE (athlete_id IS NULL OR athlete_id = '')
-          AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
-          AND dob = ?
-      `, [athleteId, fullName, dob]);
-      recordsMapped += dobMappingResult.rowCount || 0;
-    }
+    for (const record of unmatchedRecords.rows) {
+      // Check if DOB matches (with normalization)
+      const recordDob = record.dob ? normalizeDateFormat(record.dob) : '';
 
-    // If phone is provided, link records with matching phone
-    if (phoneNumber) {
-      const phoneMappingResult = await query(`
-        UPDATE athlete_competitions
-        SET athlete_id = ?
-        WHERE (athlete_id IS NULL OR athlete_id = '')
-          AND LOWER(TRIM(full_name)) = LOWER(TRIM(?))
-      `, [athleteId, fullName]);
-      recordsMapped += phoneMappingResult.rowCount || 0;
+      // Match if: name matches AND (no DOB provided OR DOBs match after normalization)
+      const shouldMatch = !normalizedDob || !recordDob || normalizedDob === recordDob;
+
+      if (shouldMatch) {
+        await query(`
+          UPDATE athlete_competitions
+          SET athlete_id = ?
+          WHERE id = ?
+        `, [athleteId, record.id]);
+        recordsMapped++;
+        logger.info(`Matched record ${record.id} to athlete ${athleteId}: name="${record.full_name}", dob="${record.dob}" (normalized: ${recordDob})`);
+      }
     }
 
     logger.info(`Auto-mapped ${recordsMapped} competition records to athlete ${athleteId} (${fullName})`);
@@ -387,25 +384,49 @@ router.get('/my-records', authenticate, asyncHandler(async (req: Request, res: R
 
   // Get athlete info
   const athleteResult = await query('SELECT * FROM athletes WHERE id = ?', [user.id]);
+  console.log('DEBUG my-records: user.id =', user.id, 'athleteResult.rows.length =', athleteResult.rows.length);
   if (athleteResult.rows.length === 0) {
     return res.status(404).json({ success: false, message: 'Athlete not found' });
   }
 
   const athlete = athleteResult.rows[0];
+  console.log('DEBUG my-records: athlete =', athlete.id, athlete.full_name, athlete.dob);
 
-  // Get all competition records that match this athlete (by name, DOB, phone, or linked athlete_id) - case-insensitive
+  // Normalize athlete's DOB for comparison
+  const normalizedAthleteDob = athlete.dob ? normalizeDateFormat(athlete.dob) : '';
+
+  // Get all competition records that could match this athlete (by name or linked athlete_id)
   const result = await query(`
     SELECT ac.*, qcr.certificate_hash
     FROM athlete_competitions ac
     LEFT JOIN quota_certificate_requests qcr ON ac.id = qcr.competition_record_id AND qcr.athlete_id = ? AND qcr.status = 'approved'
     WHERE ac.athlete_id = ?
        OR LOWER(TRIM(ac.full_name)) = LOWER(TRIM(?))
-       OR (LOWER(TRIM(ac.full_name)) = LOWER(TRIM(?)) AND ac.dob = ?)
        OR (ac.aadhar_number = ? AND ac.aadhar_number IS NOT NULL AND ac.aadhar_number != '')
     ORDER BY ac.created_at DESC
-  `, [user.id, user.id, athlete.full_name, athlete.full_name, athlete.dob, athlete.aadhar_number]);
+  `, [user.id, user.id, athlete.full_name, athlete.aadhar_number]);
 
-  const records = result.rows.map((row: any) => ({
+  // Filter results to ensure DOB matches (with normalization) when both athlete and record have DOB
+  const filteredRows = result.rows.filter((row: any) => {
+    // If already linked by athlete_id, include it
+    if (row.athlete_id === user.id) return true;
+
+    // If linked by aadhar, include it
+    if (row.aadhar_number && row.aadhar_number === athlete.aadhar_number) return true;
+
+    // For name-based matches, verify DOB if both have DOB
+    const normalizedRecordDob = row.dob ? normalizeDateFormat(row.dob) : '';
+
+    // If either doesn't have DOB, match on name only
+    if (!normalizedAthleteDob || !normalizedRecordDob) return true;
+
+    // Both have DOB, they must match
+    return normalizedAthleteDob === normalizedRecordDob;
+  });
+
+  console.log('DEBUG my-records: query result count =', result.rows.length, 'filtered count =', filteredRows.length);
+
+  const records = filteredRows.map((row: any) => ({
     id: row.id,
     fullName: row.full_name,
     fatherName: row.father_name,
@@ -492,7 +513,15 @@ router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (
       ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'), ?)
     `, [requestId, user.id, recordId, 'approved', 'system-auto-approved']);
 
-    // Generate certificate
+    // Generate the DSYS format certificate number for upper left "No." field BEFORE issuing certificate
+    const { generateCertificateNumber } = await import('../utils/certificateNumberGenerator');
+    const generatedCertNo = await generateCertificateNumber(record.game_code, record.age_group_code);
+
+    // Check if the stored certificate_no is from Excel (not in DSYS format) or was generated
+    const storedCertNo = record.certificate_no || '';
+    const isExcelCertNo = storedCertNo && !storedCertNo.startsWith('DSYS/');
+
+    // Generate certificate with metadata including generated certificate number
     const certificateData = {
       issuerDid: 'system',
       issuerName: 'Directorate of Sports and Youth Services',
@@ -506,12 +535,18 @@ router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (
         representingDistrict: record.representing_district,
         divisionStateCountry: record.division_state_country,
         gameName: record.game_name,
+        gameCode: record.game_code,
+        ageGroupCode: record.age_group_code,
         competitionName: record.competition_name,
         competitionPeriod: record.competition_period,
+        competitionPeriodFrom: record.period_of_completion_from,
+        competitionPeriodTo: record.period_of_completion_to,
         competitionHeldAt: record.competition_held_at,
         competitionLevel: record.competition_level,
         positionObtained: record.position_obtained,
         certificateNo: record.certificate_no,
+        generatedCertificateNo: generatedCertNo,
+        excelCertificateNo: isExcelCertNo ? storedCertNo : undefined,
         validForEmploymentGroup: record.valid_for_employment_group,
         applicableGovtResolutions: record.applicable_govt_resolutions
       }
@@ -534,12 +569,17 @@ router.post('/request-certificate/:recordId', authenticate, asyncHandler(async (
       gameName: record.game_name,
       competitionName: record.competition_name,
       competitionPeriod: record.competition_period,
+      competitionPeriodFrom: record.period_of_completion_from,
+      competitionPeriodTo: record.period_of_completion_to,
       competitionHeldAt: record.competition_held_at,
       competitionLevel: record.competition_level,
       positionObtained: record.position_obtained,
       certificateNo: record.certificate_no,
+      // Upper left "No." field - always use DSYS generated format
+      generatedCertificateNo: generatedCertNo,
+      // Bottom "Certificate No." field - use Excel cert no if available, otherwise generated
+      excelCertificateNo: isExcelCertNo ? storedCertNo : undefined,
       validForEmploymentGroup: record.valid_for_employment_group,
-      applicableGovtResolutions: record.applicable_govt_resolutions,
       certHash: certificate.certHash,
       issuerName: 'Deputy Director',
       issuerTitle: 'Deputy Director',

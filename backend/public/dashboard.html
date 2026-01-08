@@ -22,7 +22,7 @@
         .header {
             background: white;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            padding: 0 30px;
+            padding: 15px 40px;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -522,7 +522,7 @@
     <!-- Header -->
     <div class="header">
         <div class="logo" style="display: flex; align-items: center; gap: 10px; margin-left: 30px;">
-            <img src="/static/inside-logo.jpeg" alt="e-Pramaan Logo" style="height: 168px; width: auto;">
+            <img src="/static/inside-logo.jpeg" alt="e-Pramaan Logo" style="height: 30px; width: auto; padding: 5px 0;">
         </div>
         <div class="header-right">
             <a href="/static/bulk-upload.html" class="btn btn-primary" id="bulkUploadBtn">Bulk Upload</a>
@@ -2541,6 +2541,110 @@
             }
         }
 
+        // Toggle select all checkboxes
+        function toggleSelectAll(checkbox) {
+            const checkboxes = document.querySelectorAll('.bulk-record-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            updateSelectedCount();
+        }
+
+        // Update selected count and show/hide delete button
+        function updateSelectedCount() {
+            const checkboxes = document.querySelectorAll('.bulk-record-checkbox:checked');
+            const selectedCount = checkboxes.length;
+            const countInfo = document.getElementById('selectedCountInfo');
+            const deleteBtn = document.getElementById('deleteSelectedBtn');
+            const selectAllCheckbox = document.getElementById('selectAllBulkRecords');
+            const allCheckboxes = document.querySelectorAll('.bulk-record-checkbox');
+
+            if (countInfo) {
+                if (selectedCount > 0) {
+                    countInfo.textContent = `${selectedCount} selected`;
+                    countInfo.style.display = 'inline';
+                } else {
+                    countInfo.style.display = 'none';
+                }
+            }
+
+            if (deleteBtn) {
+                deleteBtn.style.display = selectedCount > 0 ? 'inline-block' : 'none';
+            }
+
+            // Update select all checkbox state
+            if (selectAllCheckbox && allCheckboxes.length > 0) {
+                selectAllCheckbox.checked = selectedCount === allCheckboxes.length;
+                selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < allCheckboxes.length;
+            }
+        }
+
+        // Delete selected records (bulk delete)
+        async function deleteSelectedRecords() {
+            const checkboxes = document.querySelectorAll('.bulk-record-checkbox:checked');
+            const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.recordId);
+            const selectedNames = Array.from(checkboxes).map(cb => cb.dataset.recordName);
+
+            if (selectedIds.length === 0) {
+                alert('No records selected');
+                return;
+            }
+
+            const confirmMessage = selectedIds.length === 1
+                ? `Are you sure you want to delete the record for "${selectedNames[0]}"?`
+                : `Are you sure you want to delete ${selectedIds.length} records?\n\nThis action cannot be undone.`;
+
+            if (!confirm(confirmMessage)) {
+                return;
+            }
+
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/admin/bulk-uploaded-records/bulk-delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ recordIds: selectedIds })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Remove deleted records from local array
+                    allBulkRecords = allBulkRecords.filter(r => !selectedIds.includes(r.id));
+
+                    // Update total count display
+                    const totalCountEl = document.getElementById('totalRecordsCount');
+                    if (totalCountEl) {
+                        totalCountEl.textContent = allBulkRecords.length;
+                    }
+
+                    // Reset select all checkbox
+                    const selectAllCheckbox = document.getElementById('selectAllBulkRecords');
+                    if (selectAllCheckbox) {
+                        selectAllCheckbox.checked = false;
+                        selectAllCheckbox.indeterminate = false;
+                    }
+
+                    // Re-apply filters and render
+                    filterBulkRecords();
+
+                    alert(`Successfully deleted ${result.deletedCount} record(s)`);
+                } else {
+                    alert('Error deleting records: ' + result.message);
+                }
+            } catch (error) {
+                alert('Error deleting records: ' + error.message);
+            }
+        }
+
         // Store bulk records globally for search/filter
         let allBulkRecords = [];
         let currentBulkPage = 1;
@@ -2621,15 +2725,26 @@
                                 </button>
                             </div>
 
-                            <div style="margin-bottom:15px;padding:10px 15px;background:#f8f9fa;border-radius:5px;display:flex;justify-content:space-between;align-items:center;">
-                                <span id="filteredCountInfo">Showing ${Math.min(recordsPerPage, allBulkRecords.length)} of ${allBulkRecords.length} records</span>
-                                <div id="paginationControls"></div>
+                            <div style="margin-bottom:15px;padding:10px 15px;background:#f8f9fa;border-radius:5px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+                                <div style="display:flex;align-items:center;gap:15px;">
+                                    <span id="filteredCountInfo">Showing ${Math.min(recordsPerPage, allBulkRecords.length)} of ${allBulkRecords.length} records</span>
+                                    <span id="selectedCountInfo" style="color:#861f41;font-weight:600;display:none;">0 selected</span>
+                                </div>
+                                <div style="display:flex;align-items:center;gap:10px;">
+                                    <button id="deleteSelectedBtn" onclick="deleteSelectedRecords()" style="padding:8px 16px;background:#dc3545;color:white;border:none;border-radius:5px;cursor:pointer;font-weight:500;display:none;">
+                                        🗑️ Delete Selected
+                                    </button>
+                                    <div id="paginationControls"></div>
+                                </div>
                             </div>
 
                             <div style="overflow-x:auto;">
                                 <table style="width:100%;border-collapse:collapse;font-size:0.9em;">
                                     <thead>
                                         <tr style="background:#f5f5f5;text-align:left;">
+                                            <th style="padding:10px;border-bottom:2px solid #ddd;width:40px;">
+                                                <input type="checkbox" id="selectAllBulkRecords" onchange="toggleSelectAll(this)" title="Select All" style="cursor:pointer;width:18px;height:18px;">
+                                            </th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">S.No</th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">Name</th>
                                             <th style="padding:10px;border-bottom:2px solid #ddd;">DOB</th>
@@ -2716,18 +2831,33 @@
             renderPagination(totalPages, records.length);
 
             if (records.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" style="padding:30px;text-align:center;color:#999;">No records found matching your criteria</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" style="padding:30px;text-align:center;color:#999;">No records found matching your criteria</td></tr>';
                 return;
             }
 
             let html = '';
+            // Debug: log first few records to check data structure
+            if (pageRecords.length > 0) {
+                console.log('Sample record data:', pageRecords[0]);
+                console.log('athleteId:', pageRecords[0].athleteId, 'type:', typeof pageRecords[0].athleteId);
+                console.log('certificateIssued:', pageRecords[0].certificateIssued, 'type:', typeof pageRecords[0].certificateIssued);
+            }
             pageRecords.forEach((record, index) => {
                 const statusLabel = record.certificateIssued ? 'Issued' : record.certificateRequested ? 'Requested' : 'Pending';
                 const statusColor = record.certificateIssued ? '#d1e7dd' : record.certificateRequested ? '#fff3cd' : '#f8d7da';
                 const serialNo = startIndex + index + 1;
+                // Check if record can be deleted: not claimed (no athleteId) AND certificate not issued
+                const isUnclaimed = !record.athleteId || record.athleteId === '' || record.athleteId === null;
+                const isNotIssued = !record.certificateIssued || record.certificateIssued === 0 || record.certificateIssued === '0' || record.certificateIssued === false;
+                const canDelete = isUnclaimed && isNotIssued;
 
                 html += `
                     <tr style="border-bottom:1px solid #eee;" id="bulk-record-row-${record.id}">
+                        <td style="padding:10px;">
+                            ${canDelete ? `
+                                <input type="checkbox" class="bulk-record-checkbox" data-record-id="${record.id}" data-record-name="${(record.fullName || '').replace(/"/g, '&quot;')}" onchange="updateSelectedCount()" style="cursor:pointer;width:18px;height:18px;">
+                            ` : '<span style="color:#ccc;">-</span>'}
+                        </td>
                         <td style="padding:10px;color:#666;">${serialNo}</td>
                         <td style="padding:10px;font-weight:500;">${record.fullName || 'N/A'}</td>
                         <td style="padding:10px;">${record.dob || 'N/A'}</td>
@@ -2747,7 +2877,7 @@
                             ` : '<span style="color:#999;">Unclaimed</span>'}
                         </td>
                         <td style="padding:10px;">
-                            ${!record.athleteId && !record.certificateIssued ? `
+                            ${canDelete ? `
                                 <button onclick="deleteBulkRecord('${record.id}', '${(record.fullName || '').replace(/'/g, "\\'")}')" style="padding:5px 12px;background:#dc3545;color:white;border:none;border-radius:4px;cursor:pointer;font-size:0.85em;">
                                     Delete
                                 </button>

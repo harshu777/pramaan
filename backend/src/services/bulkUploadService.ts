@@ -4,6 +4,7 @@ import { pdfService } from './pdfService';
 import { emailService } from './emailService';
 import { logger } from '../utils/logger';
 import { generateCertificateNumber } from '../utils/certificateNumberGenerator';
+import { normalizeDateFormat } from '../utils/dateUtils';
 import path from 'path';
 import fs from 'fs';
 
@@ -96,10 +97,14 @@ class BulkUploadService {
     const periodTo = row['Period of Competition TO'] || row['PERIOD OF COMPETITION TO'] || row['Period of Completion TO'] || row['PERIOD OF COMPLETION TO'] || '';
     const legacyPeriod = row['Period of the Competition'] || row['Competition Period'] || row['COMPETITION PERIOD'] || '';
 
+    // Normalize DOB to DD-MM-YYYY format using shared utility
+    const rawDob = row['Date of Birth'] || row['DOB'] || '';
+    const normalizedDob = normalizeDateFormat(rawDob);
+
     return {
       name: row['Name of the Sports Person'] || row['Name'] || row['NAME'] || '',
       fatherName: row["Father's Name / Spouse's Name"] || row['Son/Daughter/Wife of'] || row['Son/Wife/Daughter of'] || row['Father Name'] || row['FATHER NAME'] || '',
-      dob: row['Date of Birth'] || row['DOB'] || '',
+      dob: normalizedDob,
       district: row['Resident of District'] || row['District'] || row['DISTRICT'] || '',
       gameName: row['Name of the Game'] || row['Game Name'] || row['GAME NAME'] || '',
       gameCode: row['Game Code'] || row['GAME CODE'] || '',

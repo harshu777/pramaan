@@ -1,6 +1,8 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
+import fs from 'fs';
+import path from 'path';
 import { query } from '../config/database-sqlite';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { logger } from '../utils/logger';
@@ -64,15 +66,46 @@ router.post('/acs', asyncHandler(async (req: Request, res: Response) => {
       return res.redirect('/static/athlete-login.html?error=invalid_saml_response');
     }
 
+    // DIRECT CONSOLE OUTPUT for debugging
+    console.log('========== SAML ACS HANDLER ==========');
+    console.log('RAW PROFILE:', JSON.stringify(profile, null, 2));
+    console.log('PROFILE KEYS:', Object.keys(profile || {}));
+    console.log('PROFILE.nameID:', profile?.nameID, '(type:', typeof profile?.nameID, ')');
+    console.log('PROFILE.emailAddress:', profile?.emailAddress);
+    console.log('PROFILE.screenName:', profile?.screenName);
+    console.log('PROFILE.firstName:', profile?.firstName);
+    console.log('PROFILE.attributes:', profile?.attributes);
+    console.log('=======================================');
+
+    logger.info('=== ACS Handler - Profile Analysis ===');
     logger.info('SAML profile received:', JSON.stringify(profile, null, 2));
+    logger.info('SAML profile keys:', Object.keys(profile || {}));
+    logger.info('SAML profile.nameID:', profile?.nameID);
+    logger.info('SAML profile.nameID type:', typeof profile?.nameID);
+    logger.info('SAML profile.attributes:', JSON.stringify(profile?.attributes, null, 2));
 
     // Parse the SAML attributes
     const attributes = parseSamlAttributes(profile);
+    logger.info('=== Parsed Attributes Result ===');
+    logger.info('Parsed attributes:', JSON.stringify(attributes, null, 2));
 
-    if (!attributes.nameID) {
-      logger.error('No nameID in SAML response');
-      return res.redirect('/static/athlete-login.html?error=no_nameid');
+    // Determine the best user identifier (prefer email, then screenName, then nameID)
+    // Note: nameID is often empty from this IdP, so we rely on attributes
+    const userIdentifier = (attributes.email && attributes.email.trim()) ||
+                           (attributes.screenName && attributes.screenName.trim()) ||
+                           (attributes.nameID && attributes.nameID.trim()) ||
+                           (attributes.uuid && attributes.uuid.trim());
+
+    logger.info(`User identifier candidates - email: "${attributes.email}", screenName: "${attributes.screenName}", nameID: "${attributes.nameID}", uuid: "${attributes.uuid}"`);
+    logger.info(`Selected user identifier: "${userIdentifier}"`);
+
+    if (!userIdentifier) {
+      logger.error('SSO provider did not return any user identification (checked: email, screenName, nameID, uuid)');
+      logger.error('Full attributes object:', JSON.stringify(attributes, null, 2));
+      return res.redirect('/static/athlete-login.html?error=no_user_id');
     }
+
+    logger.info(`SAML user identifier resolved: ${userIdentifier}`);
 
     // Find or create athlete based on SAML response
     const athlete = await findOrCreateSamlAthlete(attributes);
@@ -138,8 +171,15 @@ router.post('/slo', asyncHandler(async (req: Request, res: Response) => {
 async function findOrCreateSamlAthlete(attributes: SamlUserAttributes): Promise<any> {
   const { nameID, uuid, email, fullName, firstName, lastName, screenName, phone, district, state, dob } = attributes;
 
-  // Use uuid as the primary identifier, fallback to nameID
-  const samlIdentifier = uuid || nameID;
+  // Use uuid as the primary identifier, fallback to nameID, then email, then screenName
+  // This handles IdPs that don't send a nameID but do send email/screenName attributes
+  const samlIdentifier = (uuid && uuid.trim()) ||
+                          (nameID && nameID.trim()) ||
+                          (email && email.trim()) ||
+                          (screenName && screenName.trim()) ||
+                          '';
+
+  logger.info(`SAML identifier for athlete lookup: "${samlIdentifier}" (uuid: "${uuid}", nameID: "${nameID}", email: "${email}", screenName: "${screenName}")`);
 
   // Build full name from firstName + lastName if not provided
   const athleteFullName = fullName || [firstName, lastName].filter(Boolean).join(' ') || screenName || 'SAML User';

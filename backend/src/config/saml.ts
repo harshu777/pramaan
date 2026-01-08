@@ -140,10 +140,32 @@ export interface SamlUserAttributes {
 }
 
 export const parseSamlAttributes = (profile: any): SamlUserAttributes => {
+  // Log the raw profile structure for debugging
+  logger.info('=== SAML PROFILE DEBUG START ===');
+  logger.info('Profile type:', typeof profile);
+  logger.info('Profile keys:', profile ? Object.keys(profile) : 'null');
+  logger.info('Profile stringify:', JSON.stringify(profile, null, 2));
+  if (profile?.attributes) {
+    logger.info('Profile.attributes keys:', Object.keys(profile.attributes));
+    logger.info('Profile.attributes stringify:', JSON.stringify(profile.attributes, null, 2));
+  }
+  logger.info('=== SAML PROFILE DEBUG END ===');
+
+  // Helper to get clean string value (trim and handle empty)
+  const cleanString = (val: any): string => {
+    if (val === null || val === undefined) return '';
+    const str = Array.isArray(val) ? val[0] : String(val);
+    return str ? str.trim() : '';
+  };
+
+  // Get nameID - handle empty/whitespace as empty string
+  const rawNameID = profile?.nameID || profile?.NameID || '';
+  const nameID = cleanString(rawNameID);
+
   // Map common SAML attribute names to our format
   const attributes: SamlUserAttributes = {
-    nameID: profile.nameID || profile.NameID || '',
-    nameIDFormat: profile.nameIDFormat || profile.NameIDFormat,
+    nameID: nameID,
+    nameIDFormat: profile?.nameIDFormat || profile?.NameIDFormat,
   };
 
   // Attribute mappings - includes expected attributes from Sports Portal IDP
@@ -161,13 +183,71 @@ export const parseSamlAttributes = (profile: any): SamlUserAttributes => {
     dob: ['dob', 'dateOfBirth', 'birthDate'],
   };
 
+  // Helper function to extract value from profile or nested attributes
+  const findAttributeValue = (possibleNames: string[]): string | undefined => {
+    for (const name of possibleNames) {
+      let val: any;
+
+      // Check directly on profile
+      val = profile?.[name];
+      if (val !== undefined && val !== null && val !== '') {
+        const cleaned = cleanString(val);
+        if (cleaned) {
+          logger.info(`Found attribute '${name}' directly on profile: ${cleaned}`);
+          return cleaned;
+        }
+      }
+
+      // Check in profile.attributes (node-saml sometimes nests attributes here)
+      val = profile?.attributes?.[name];
+      if (val !== undefined && val !== null && val !== '') {
+        const cleaned = cleanString(val);
+        if (cleaned) {
+          logger.info(`Found attribute '${name}' in profile.attributes: ${cleaned}`);
+          return cleaned;
+        }
+      }
+
+      // Check all keys of profile for case-insensitive match
+      if (profile) {
+        for (const key of Object.keys(profile)) {
+          if (key.toLowerCase() === name.toLowerCase()) {
+            val = profile[key];
+            if (val !== undefined && val !== null && val !== '') {
+              const cleaned = cleanString(val);
+              if (cleaned) {
+                logger.info(`Found attribute '${name}' (case-insensitive as '${key}') on profile: ${cleaned}`);
+                return cleaned;
+              }
+            }
+          }
+        }
+      }
+
+      // Check all keys of profile.attributes for case-insensitive match
+      if (profile?.attributes) {
+        for (const key of Object.keys(profile.attributes)) {
+          if (key.toLowerCase() === name.toLowerCase()) {
+            val = profile.attributes[key];
+            if (val !== undefined && val !== null && val !== '') {
+              const cleaned = cleanString(val);
+              if (cleaned) {
+                logger.info(`Found attribute '${name}' (case-insensitive as '${key}') in profile.attributes: ${cleaned}`);
+                return cleaned;
+              }
+            }
+          }
+        }
+      }
+    }
+    return undefined;
+  };
+
   // Extract attributes from profile
   for (const [key, possibleNames] of Object.entries(attributeMappings)) {
-    for (const name of possibleNames) {
-      if (profile[name]) {
-        attributes[key] = Array.isArray(profile[name]) ? profile[name][0] : profile[name];
-        break;
-      }
+    const value = findAttributeValue(possibleNames);
+    if (value) {
+      attributes[key] = value;
     }
   }
 
@@ -181,10 +261,26 @@ export const parseSamlAttributes = (profile: any): SamlUserAttributes => {
     attributes.email = attributes.nameID;
   }
 
-  // If uuid is not set, use nameID as fallback
+  // If uuid is not set, use nameID as fallback, or email/screenName if nameID is empty
   if (!attributes.uuid) {
-    attributes.uuid = attributes.nameID;
+    attributes.uuid = attributes.nameID || attributes.email || attributes.screenName || '';
   }
+
+  // If nameID is empty, use email or screenName as identifier
+  if (!attributes.nameID) {
+    attributes.nameID = attributes.email || attributes.screenName || attributes.uuid || '';
+    logger.info('NameID was empty, using fallback identifier:', attributes.nameID);
+  }
+
+  // Log all available profile data for debugging
+  logger.info('Raw SAML profile structure:', {
+    hasAttributes: !!profile.attributes,
+    attributesKeys: profile.attributes ? Object.keys(profile.attributes) : [],
+    profileKeys: Object.keys(profile),
+    nameID: profile.nameID,
+    emailAddress: profile.emailAddress,
+    'profile.attributes?.emailAddress': profile.attributes?.emailAddress
+  });
 
   logger.info('Parsed SAML attributes:', {
     nameID: attributes.nameID,
